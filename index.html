@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='UTF-8'/>
+  <title>Create a sharable list of things on map</title>
+  <meta name='apple-mobile-web-app-status-bar-style' content='white' />
+  <link rel='shortcut icon' href='./img/favicon.ico' type='image/x-icon' />
+  <link rel='stylesheet' href='./app.css'>
+</head>
+<body>
+  <div id='map' class='map'></div>
+
+  <div id='maker' class='maker-container pad2'>
+    <div class='maker cell4'>
+      <div class='introduction pad2'>
+        <input id='title' type='text' name='title' placeholder='Title' />
+        <textarea id='about' name='about' placeholder='Introduction'></textarea>
+      </div>
+      <a href='#' class='add clearfix pad2'>
+        <span class='icon icon-add inline'></span>Add Marker
+      </a>
+      <ul class='markers' id='markers'></ul>
+    </div>
+  </div>
+
+  <script data-template='marker' type='text/html'>
+    <a href='#' class='marker hover'>
+      <div class='popup arrow-bottom'>
+        <h6>Icon</h6>
+          <select id='maki-icon' name='icon'></select>
+        <h6>Color</h6>
+          <ul id='color-grid' class='clearfix'></ul>
+      </div>
+    </a>
+    <div class='details'>
+      <input type='text' name='title' placeholder='Title' />
+      <textarea name='description' placeholder='Description'></textarea>
+    </div>
+    <ul class='actions fr'>
+      <a href='#' class='icon icon-rubbish small'></a>
+    </ul>
+  </script>
+
+  <script data-template='option' type='text/html'>
+    <option value='<%= value %>'><%= name %></option>
+  </script>
+
+  <script data-template='colors' type='text/html'>
+    <li><a href='#' class='swatch' title='<%= hex %>' style='background-color="<%= hex %>"'></a></li>
+  </script>
+
+  <script src='dist/maplist.js'></script>
+</body>
+</html>
