@@ -25,21 +25,19 @@
   </div>
 
   <script data-template='marker' type='text/html'>
-    <a href='#' class='marker hover'>
-      <div class='popup arrow-bottom'>
-        <h6>Icon</h6>
-          <select id='maki-icon' name='icon'></select>
-        <h6>Color</h6>
-          <ul id='color-grid' class='clearfix'></ul>
+    <a href='#' class='fl inline marker hover'>
+      <span class='icon icon-marker' style='color:#<%= hex %>'></span>
+      <div class='popup round arrow-left'>
+        <ul class='color-grid' class='clearfix'></ul>
       </div>
     </a>
-    <div class='details'>
+    <div class='fl details'>
       <input type='text' name='title' placeholder='Title' />
       <textarea name='description' placeholder='Description'></textarea>
+      <ul class='actions fr'>
+        <li><a href='#' class='icon icon-rubbish small'></a></li>
+      </ul>
     </div>
-    <ul class='actions fr'>
-      <a href='#' class='icon icon-rubbish small'></a>
-    </ul>
   </script>
 
   <script data-template='option' type='text/html'>
@@ -47,7 +45,7 @@
   </script>
 
   <script data-template='colors' type='text/html'>
-    <li><a href='#' class='swatch' title='<%= hex %>' style='background-color="<%= hex %>"'></a></li>
+    <a href='#' class='swatch' title='<%= hex %>' data-marker='<%= markerId %>' style='background-color:<%= hex %>'></a>
   </script>
 
   <script src='dist/maplist.js'></script>

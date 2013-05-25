@@ -6228,7 +6228,6 @@ var icons = require('./src/icons.js');
 var geojson = require('./src/markers.geojson');
 
 var m = document.getElementById('map');
-
 var map = mapbox.map(m, mapbox.layer().id('tristen.map-ixqro653'));
     map.zoom(3);
 
@@ -6242,6 +6241,7 @@ d3.selectAll('script[data-template]').each(function() {
 // Some setup
 var set;
 var id;
+var hex;
 var _d; // Down Event
 var tol = 4; // Touch Tolerance
 var _downLock = false;
@@ -6355,7 +6355,6 @@ function renderMarkers(cb) {
         marker.add_feature(geojson.features[i]);
     }
 
-    console.log(geojson);
     map.addLayer(marker);
     set = false;
     if (cb) cb();
@@ -6380,28 +6379,58 @@ d3.select('.add').on('click', function() {
 
 function markerAdded() {
     d3.select('.add').classed('on', null);
+    hex = '505050';
 
     d3.select('#markers')
         .append('li')
-        .classed('pad21h ' + id, true)
-        .html(templates.marker())
+        .classed('clearfix pad21h ' + id, true)
+        .html(templates.marker({
+            hex: hex
+        }))
         .select('.icon-rubbish')
             .attr('data-parent', id)
             .call(removeMarker);
 
     // Replace the list item placed with markerContents
     // d3.select(id).select('#maki-icon').call(populateIcons);
-    // d3.select(id).select('#color-grid').call(populateColors);
+    d3.select('.' + id).select('.color-grid').call(function(el) {
+        populateColors(el, id);
+    });
 }
 
-function populateIcons(el) {}
-function populateColors(el) {
+function populateColors(el, id) {
     _(icons.colors).each(function(v) {
         el
             .append('li')
             .html(templates.colors({
+                markerId: id,
                 hex: v
             }))
+            .select('.swatch')
+              .call(markerColor);
+    });
+}
+
+function markerColor(el) {
+    el.on('click', function() {
+        d3.event.stopPropagation();
+        d3.event.preventDefault();
+
+        var color = this.getAttribute('title').split('#').pop();
+        var markerId = this.getAttribute('data-marker');
+
+        // Run through the array of markers, if an id matches one,
+        // change the 'properties': { 'marker-color': '#505050'
+        _(geojson.features).each(function(f) {
+            if (f.properties.id === markerId) {
+               f.properties['marker-color'] = color;
+            }
+        });
+
+        d3.select('.' + markerId).select('.icon-marker')
+            .style('color', '#' + color);
+
+        renderMarkers();
     });
 }
 
@@ -6433,6 +6462,21 @@ d3.select('#markers')
         }
     });
 
+// Auto resize textarea to avoid overflow: scroll
+d3.select('textarea')
+    .on('change', resize)
+    .on('cut', resize)
+    .on('paste', resize)
+    .on('drop', resize)
+    .on('keydown', resize);
+
+function resize() {
+    var el = this;
+    _.defer(function() {
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    });
+}
 
 },{"./src/icons.js":1,"./src/markers.geojson":2,"underscore":4,"d3":5,"hoverintent":6}],4:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4

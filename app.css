@@ -70,9 +70,9 @@ table { border-collapse: collapse; border-spacing:0; }
 
 @font-face {
   font-family:'Maplist';
-    src:url('fonts/maplist-31ace7897028fda5704e9d6a970be3e5.eot');
-    src:url('fonts/maplist-31ace7897028fda5704e9d6a970be3e5.eot?#iefix') format('embedded-opentype'),
-        url('fonts/maplist-31ace7897028fda5704e9d6a970be3e5.woff') format('woff');
+    src:url('fonts/maplist-81f21cbdcfbb9a4c154d2dd14ca1178a.eot');
+    src:url('fonts/maplist-81f21cbdcfbb9a4c154d2dd14ca1178a.eot?#iefix') format('embedded-opentype'),
+        url('fonts/maplist-81f21cbdcfbb9a4c154d2dd14ca1178a.woff') format('woff');
   font-weight:700;
   font-style:normal;
   }
@@ -306,14 +306,16 @@ textarea {
   .icon-checkmark:before { content: "\f101"; }
   .icon-error:before { content: "\f102"; }
   .icon-markdown:before { content: "\f103"; }
-  .icon-pencil:before { content: "\f104"; }
-  .icon-private:before { content: "\f105"; }
-  .icon-question:before { content: "\f106"; }
-  .icon-removed:before { content: "\f107"; }
-  .icon-renamed:before { content: "\f108"; }
-  .icon-rubbish:before { content: "\f109"; }
-  .icon-saving:before { content: "\f10a"; }
-  .icon-search:before { content: "\f10b"; }
+  .icon-marker:before { content: "\f104"; }
+  .icon-pencil:before { content: "\f105"; }
+  .icon-private:before { content: "\f106"; }
+  .icon-question:before { content: "\f107"; }
+  .icon-removed:before { content: "\f108"; }
+  .icon-renamed:before { content: "\f109"; }
+  .icon-rubbish:before { content: "\f10a"; }
+  .icon-saving:before { content: "\f10b"; }
+  .icon-search:before { content: "\f10c"; }
+  .icon-terrain:before { content: "\f10d"; }
 
 /* Layout
 ------------------------------------------------------- */
@@ -373,25 +375,40 @@ textarea {
 .centered     { text-align:center; }
 .inline       { margin-right:10px; }
 
-.tip-top:after,
-.tip-right:after,
-.tip-bottom:after,
-.tip-left:after {
+.round {
+  -webkit-border-radius:4px;
+          border-radius:4px;
+  }
+
+.arrow-top:after,
+.arrow-right:after,
+.arrow-bottom:after,
+.arrow-left:after {
   content:'';
-  border-width:0 5px 5px;
+  border-width:0 8px 8px;
   border-style:solid;
   position:absolute;
-  border-color:#333 transparent;
+  border-color:#fff transparent;
   }
-  .tip-bottom:after {
-    border-width:5px 5px 0;
+  .arrow-top:after {
+    top:-8px;
     }
-  .tip-left:after {
-    border-width:5px 5px 5px 0;
-    border-color:transparent #333;
+  .arrow-bottom:after {
+    border-width:8px 8px 0;
+    bottom:-8px;
+    left:8px;
     }
-  .tip-right:after {
+  .arrow-left:after,
+  .arrow-right:after {
+    border-color:transparent #fff;
+    }
+  .arrow-left:after {
+    border-width:8px 8px 8px 0;
+    left:-8px;
+    }
+  .arrow-right:after {
     border-width:5px 0 5px 5px;
+    right:-5px;
     }
 
 /* Application Styling
@@ -456,10 +473,18 @@ textarea {
   .markers > li {
     position:relative;
     border-bottom:1px solid #9ea7ad;
+    display:block;
     }
     .markers > li:last-child {
       border-bottom:none;
       }
+
+.marker {
+  margin-top:5px;
+  }
+  .marker .icon {
+    text-shadow:4px 4px 0 rgba(0,0,0,0.20);
+    }
 
 .actions {
   background:#f8f8f8;
@@ -476,7 +501,7 @@ textarea {
       padding:0 10px;
       text-align:center;
       height:30px;
-      line-height:25px;
+      line-height:28px;
       color:#3C4E5A;
       border:1px solid #a4acb2;
       }
@@ -486,17 +511,14 @@ textarea {
 
 .popup {
   display:none;
-  border:1px solid #ccc;
-  background:#000;
+  background:#fff;
   z-index:1000;
   position:absolute;
-  left:50%;
-  bottom:95px;
-  width:170px;
-  margin-left:-105px;
-  border:none;
-  padding:20px;
-  font-size:22px;
+  top:5px;
+  padding:5px;
+  margin-left:22px;
+  -webkit-box-shadow:1px 1px 4px rgba(0,0,0,0.25);
+          box-shadow:1px 1px 4px rgba(0,0,0,0.25);
   -webkit-animation-duration:500ms;
      -moz-animation-duration:500ms;
        -o-animation-duration:500ms;
@@ -505,27 +527,15 @@ textarea {
      -moz-animation-fill-mode:both;
        -o-animation-fill-mode:both;
           animation-fill-mode:both;
-  -webkit-box-shadow:0 4px 8px rgba(0,0,0,0.25);
-          box-shadow:0 4px 8px rgba(0,0,0,0.25);
-  -webkit-border-radius:4px;
-          border-radius:4px;
   }
-  .popup:after {
-    top:100%;
-    border:solid transparent;
-    content:'';
-    height:0;
-    width:0;
-    left:50%;
-    position:absolute;
-    pointer-events:none;
-    border-top-color:#000;
-    border-width:14px;
-    margin-left:-14px;
+  .popup.arrow-left:after {
+    top:12px;
+    }
+  .hover:hover .popup {
+    display:block;
     }
 
 .on .popup {
-  display:block;
   -webkit-animation-name:fadeInUp;
 	   -moz-animation-name:fadeInUp;
 	     -o-animation-name:fadeInUp;
@@ -538,6 +548,24 @@ textarea {
 	     -o-animation-name:fadeInUpOut;
 	        animation-name:fadeInUpOut;
   }
+
+.color-grid li {
+  float:left;
+  }
+  .swatch {
+    display:block;
+    width:30px;
+    height:30px;
+    }
+    .swatch:hover {
+      border:2px solid rgba(0,0,0,0.25);
+      }
+    .swatch:active {
+      -webkit-box-shadow:inset 0 2px 2px -1px rgba(0,0,0,0.25),
+                         inset 0 15px 30px rgba(255,255,255,0.25);
+              box-shadow:inset 0 2px 2px -1px rgba(0,0,0,0.25),
+                         inset 0 15px 30px rgba(255,255,255,0.25);
+      }
 
 /*On Fade in*/
 @-webkit-keyframes fadeInUp {
