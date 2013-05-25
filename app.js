@@ -4,7 +4,11 @@ var _ = require('underscore');
 var d3 = require('d3');
 var intent = require('hoverintent');
 var icons = require('./src/icons.js');
-var map = mapbox.map('map', mapbox.layer().id('tristen.map-ixqro653'));
+var geojson = require('./src/markers.geojson');
+
+var m = document.getElementById('map');
+
+var map = mapbox.map(m, mapbox.layer().id('tristen.map-ixqro653'));
     map.zoom(3);
 
 // Compile templates into an object
@@ -15,11 +19,12 @@ d3.selectAll('script[data-template]').each(function() {
 });
 
 // Some setup
-var point;
 var set;
+var id;
 var _d; // Down Event
 var tol = 4; // Touch Tolerance
 var _downLock = false;
+var marker;
 var _clickTimeout = false;
 
 function killTimeout() {
@@ -45,7 +50,8 @@ function onDown() {
     if (killTimeout()) { return; }
 
     // Prevent interaction offset calculations happening while
-    // the user is dragging the map. Store this event so that we // can compare it to the up event.
+    // the user is dragging the map. Store this event so that we
+    // can compare it to the up event.
     _downLock = true;
     _d = new MM.Point(d3.event.clientX, d3.event.clientY);
 
@@ -53,8 +59,8 @@ function onDown() {
         d3.select(document.body).on('click', onUp);
         d3.select(document.body).on('mouseup', onUp);
 
-        // Only track Single touches.
-        // Double touches will not affect this control
+    // Only track Single touches.
+    // Double touches will not affect this control
     } else if (d3.event.type === 'touchstart' && d3.event.touches.length === 1) {
         // Touch moves invalidate touches
         d3.select(map.parent).on('touchend', onUp);
@@ -76,7 +82,7 @@ function onUp() {
     d3.select(map.parent).on('touchcancel', null);
 
     if (Math.round(pos.y / tol) === Math.round(_d.y / tol) &&
-       Math.round(pos.x / tol) === Math.round(_d.x / tol)) {
+        Math.round(pos.x / tol) === Math.round(_d.x / tol)) {
         // Contain the event data in a closure.
         _clickTimeout = window.setTimeout(
         function() {
@@ -88,59 +94,71 @@ function onUp() {
 }
 
 function addMarker(pos) {
-    if (!set) {
+    if (set) {
         var l = map.pointLocation(pos);
+        id = 'id-' + Math.random().toString(36).substring(7);
 
-        // Create and add marker layer
-        point = mapbox.markers.layer().features([{
+        geojson.features.push({
             'geometry': {
                 'type': 'Point',
                 'coordinates': [l.lon, l.lat]
             },
             'properties': {
-                'marker-size': 'large',
-                'marker-color': '#f0a'
+                'id': id,
+                'marker-color': '#505050'
             }
-        }]).factory(function(f) {
-            var mark = document.createElement('div');
-                mark.className = 'marker';
+        });
 
-            var img = document.createElement('img');
-                img.className = 'marker-point';
-                img.setAttribute('src', f.properties.image);
-
-            mark.appendChild(img);
-
-            var close = document.createElement('a');
-                close.className = 'close';
-                close.setAttribute('title', 'Remove Marker');
-                close.setAttribute('href', '#close');
-
-            mark.appendChild(close);
-
+        renderMarkers(function() {
             // center the map on where it was selected.
             map.ease.location({
                 lat: l.lat,
                 lon: l.lon
             }).zoom(map.zoom()).optimal();
 
-            return mark;
+            markerAdded();
         });
-
-        map.addLayer(point);
-        set = true;
     }
 }
 
-d3.select(map.parent).on('mousedown', onDown);
-d3.select(map.parent).on('touchstart', onDown);
+function renderMarkers(cb) {
+    // Remove the previous marker
+    // TODO add new objects to the existing markers layer
+    // rather than re-creating the entire layer each time.
+    if (typeof marker === 'object') marker.destroy();
+
+    // Create and add marker layer
+    marker = mapbox.markers.layer();
+
+    for (var i = 0; i < geojson.features.length; i++) {
+        marker.add_feature(geojson.features[i]);
+    }
+
+    console.log(geojson);
+    map.addLayer(marker);
+    set = false;
+    if (cb) cb();
+}
 
 // Adding Markers
 // --------------------------------------
 d3.select('.add').on('click', function() {
-    d3.event.stopPropagation();
-    d3.event.preventDefault();
-    var id = 'id-' + Math.random().toString(36).substring(7);
+    if (!set) {
+        d3.event.stopPropagation();
+        d3.event.preventDefault();
+
+        this.className += ' on';
+
+        set = true;
+        m.style.cursor = 'crosshair';
+
+        d3.select(map.parent).on('mousedown', onDown);
+        d3.select(map.parent).on('touchstart', onDown);
+    }
+});
+
+function markerAdded() {
+    d3.select('.add').classed('on', null);
 
     d3.select('#markers')
         .append('li')
@@ -150,9 +168,10 @@ d3.select('.add').on('click', function() {
             .attr('data-parent', id)
             .call(removeMarker);
 
-    d3.select(id).select('#maki-icon').call(populateIcons);
-    d3.select(id).select('#color-grid').call(populateColors);
-});
+    // Replace the list item placed with markerContents
+    // d3.select(id).select('#maki-icon').call(populateIcons);
+    // d3.select(id).select('#color-grid').call(populateColors);
+}
 
 function populateIcons(el) {}
 function populateColors(el) {
@@ -168,8 +187,17 @@ function populateColors(el) {
 // Remove Markers
 // --------------------------------------
 function removeMarker(el) {
+    var marker = el.attr('data-parent');
+
     el.on('click', function() {
-        d3.select('.' + el.attr('data-parent')).remove();
+        d3.select('.' + marker).remove();
+        // Iterate over the geojson object an remove
+        // the marker entry with the associated id.
+        geojson.features = _(geojson.features).filter(function(f) {
+            return f.properties.id !== marker;
+        });
+
+        renderMarkers();
     });
 }
 

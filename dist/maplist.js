@@ -6213,16 +6213,24 @@ module.exports = {
 }
 
 },{}],2:[function(require,module,exports){
+module.exports =  { 
+  "type": "FeatureCollection",
+  "features": []
+}
+
+},{}],3:[function(require,module,exports){
 // Initialization
 // --------------------------------------
 var _ = require('underscore');
 var d3 = require('d3');
 var intent = require('hoverintent');
 var icons = require('./src/icons.js');
-var map = mapbox.map('map', mapbox.layer().id('tristen.map-ixqro653'));
-    map.zoom(3);
+var geojson = require('./src/markers.geojson');
 
-console.log(intent);
+var m = document.getElementById('map');
+
+var map = mapbox.map(m, mapbox.layer().id('tristen.map-ixqro653'));
+    map.zoom(3);
 
 // Compile templates into an object
 var templates = {};
@@ -6232,11 +6240,12 @@ d3.selectAll('script[data-template]').each(function() {
 });
 
 // Some setup
-var point;
 var set;
+var id;
 var _d; // Down Event
 var tol = 4; // Touch Tolerance
 var _downLock = false;
+var marker;
 var _clickTimeout = false;
 
 function killTimeout() {
@@ -6262,7 +6271,8 @@ function onDown() {
     if (killTimeout()) { return; }
 
     // Prevent interaction offset calculations happening while
-    // the user is dragging the map. Store this event so that we // can compare it to the up event.
+    // the user is dragging the map. Store this event so that we
+    // can compare it to the up event.
     _downLock = true;
     _d = new MM.Point(d3.event.clientX, d3.event.clientY);
 
@@ -6270,8 +6280,8 @@ function onDown() {
         d3.select(document.body).on('click', onUp);
         d3.select(document.body).on('mouseup', onUp);
 
-        // Only track Single touches.
-        // Double touches will not affect this control
+    // Only track Single touches.
+    // Double touches will not affect this control
     } else if (d3.event.type === 'touchstart' && d3.event.touches.length === 1) {
         // Touch moves invalidate touches
         d3.select(map.parent).on('touchend', onUp);
@@ -6293,7 +6303,7 @@ function onUp() {
     d3.select(map.parent).on('touchcancel', null);
 
     if (Math.round(pos.y / tol) === Math.round(_d.y / tol) &&
-       Math.round(pos.x / tol) === Math.round(_d.x / tol)) {
+        Math.round(pos.x / tol) === Math.round(_d.x / tol)) {
         // Contain the event data in a closure.
         _clickTimeout = window.setTimeout(
         function() {
@@ -6305,71 +6315,84 @@ function onUp() {
 }
 
 function addMarker(pos) {
-    if (!set) {
+    if (set) {
         var l = map.pointLocation(pos);
+        id = 'id-' + Math.random().toString(36).substring(7);
 
-        // Create and add marker layer
-        point = mapbox.markers.layer().features([{
+        geojson.features.push({
             'geometry': {
                 'type': 'Point',
                 'coordinates': [l.lon, l.lat]
             },
             'properties': {
-                'marker-size': 'large',
-                'marker-color': '#f0a'
+                'id': id,
+                'marker-color': '#505050'
             }
-        }]).factory(function(f) {
-            var mark = document.createElement('div');
-                mark.className = 'marker';
+        });
 
-            var img = document.createElement('img');
-                img.className = 'marker-point';
-                img.setAttribute('src', f.properties.image);
-
-            mark.appendChild(img);
-
-            var close = document.createElement('a');
-                close.className = 'close';
-                close.setAttribute('title', 'Remove Marker');
-                close.setAttribute('href', '#close');
-
-            mark.appendChild(close);
-
+        renderMarkers(function() {
             // center the map on where it was selected.
             map.ease.location({
                 lat: l.lat,
                 lon: l.lon
             }).zoom(map.zoom()).optimal();
 
-            return mark;
+            markerAdded();
         });
-
-        map.addLayer(point);
-        set = true;
     }
 }
 
-d3.select(map.parent).on('mousedown', onDown);
-d3.select(map.parent).on('touchstart', onDown);
+function renderMarkers(cb) {
+    // Remove the previous marker
+    // TODO add new objects to the existing markers layer
+    // rather than re-creating the entire layer each time.
+    if (typeof marker === 'object') marker.destroy();
+
+    // Create and add marker layer
+    marker = mapbox.markers.layer();
+
+    for (var i = 0; i < geojson.features.length; i++) {
+        marker.add_feature(geojson.features[i]);
+    }
+
+    console.log(geojson);
+    map.addLayer(marker);
+    set = false;
+    if (cb) cb();
+}
 
 // Adding Markers
 // --------------------------------------
 d3.select('.add').on('click', function() {
-    d3.event.stopPropagation();
-    d3.event.preventDefault();
-    var id = '.id-' + Math.random().toString(36).substring(7);
+    if (!set) {
+        d3.event.stopPropagation();
+        d3.event.preventDefault();
+
+        this.className += ' on';
+
+        set = true;
+        m.style.cursor = 'crosshair';
+
+        d3.select(map.parent).on('mousedown', onDown);
+        d3.select(map.parent).on('touchstart', onDown);
+    }
+});
+
+function markerAdded() {
+    d3.select('.add').classed('on', null);
 
     d3.select('#markers')
         .append('li')
-        .classed('pad2h ' + id, true)
+        .classed('pad21h ' + id, true)
         .html(templates.marker())
         .select('.icon-rubbish')
             .attr('data-parent', id)
             .call(removeMarker);
 
-    d3.select(id).select('#maki-icon').call(populateIcons);
-    d3.select(id).select('#color-grid').call(populateColors);
-});
+    // Replace the list item placed with markerContents
+    // d3.select(id).select('#maki-icon').call(populateIcons);
+    // d3.select(id).select('#color-grid').call(populateColors);
+}
 
 function populateIcons(el) {}
 function populateColors(el) {
@@ -6385,8 +6408,17 @@ function populateColors(el) {
 // Remove Markers
 // --------------------------------------
 function removeMarker(el) {
+    var marker = el.attr('data-parent');
+
     el.on('click', function() {
-        d3.select(el.attr('data-parent')).remove();
+        d3.select('.' + marker).remove();
+        // Iterate over the geojson object an remove
+        // the marker entry with the associated id.
+        geojson.features = _(geojson.features).filter(function(f) {
+            return f.properties.id !== marker;
+        });
+
+        renderMarkers();
     });
 }
 
@@ -6402,7 +6434,7 @@ d3.select('#markers')
     });
 
 
-},{"./src/icons.js":1,"underscore":3,"d3":4,"hoverintent":5}],3:[function(require,module,exports){
+},{"./src/icons.js":1,"./src/markers.geojson":2,"underscore":4,"d3":5,"hoverintent":6}],4:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -7631,16 +7663,16 @@ d3.select('#markers')
 }).call(this);
 
 })()
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 (function(){(function(global){var hoverintent=function(el,over,out){var x,y,pX,pY;var h={},state=0,timer=0;var options={sensitivity:7,interval:100,timeout:0};var defaults=function(opt){options=merge(opt||{},options)};var merge=function(obj){for(var i=1;i<arguments.length;i++){var def=arguments[i];for(var n in def){if(obj[n]===undefined)obj[n]=def[n]}}return obj};var addEvent=function(object,event,method){if(object.attachEvent){object["e"+event+method]=method;object[event+method]=function(){object["e"+event+method](window.event)};object.attachEvent("on"+event,object[event+method])}else{object.addEventListener(event,method,false)}};var removeEvent=function(object,event,method){if(object.detachEvent){object.detachEvent("on"+event,object[event+method]);object[event+method]=null}else{object.removeEventListener(event,method,false)}};var track=function(e){x=e.pageX;y=e.pageY};var delay=function(el,outEvent,e){if(timer)timer=clearTimeout(timer);state=0;return outEvent.call(el,e)};var dispatch=function(e,event,over){var el=e.currentTarget;if(timer)timer=clearTimeout(timer);if(over){pX=e.pageX;pY=e.pageY;addEvent(el,"mousemove",track(e));if(state!==1){timer=setTimeout(function(){compare(el,event,e)},options.interval)}}else{removeEvent(el,"mousemove",track(e));if(state===1){timer=setTimeout(function(){delay(el,event,e)},options.timeout)}}return this};var compare=function(el,overEvent,e){if(timer)timer=clearTimeout(timer);if(Math.abs(pX-x)+Math.abs(pY-y)<options.sensitivity){removeEvent(el,"mousemove",track);state=1;return overEvent.call(el,e)}else{pX=x;pY=y;timer=setTimeout(function(){compare(el,overEvent,e)},options.interval)}};h.options=function(opt){defaults(opt)};if(el){addEvent(el,"mouseover",function(e){dispatch(e,over,true)});addEvent(el,"mouseout",function(e){dispatch(e,out)})}defaults();return h};global.hoverintent=hoverintent;if(typeof module!=="undefined")module.exports=hoverintent})(this);
 })()
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 (function(){require("./d3");
 module.exports = d3;
 (function () { delete this.d3; })(); // unset global
 
 })()
-},{"./d3":6}],6:[function(require,module,exports){
+},{"./d3":7}],7:[function(require,module,exports){
 d3 = function() {
   var d3 = {
     version: "3.1.9"
@@ -16221,5 +16253,5 @@ d3 = function() {
   }
   return d3;
 }();
-},{}]},{},[2])
+},{}]},{},[3])
 ;

@@ -70,9 +70,9 @@ table { border-collapse: collapse; border-spacing:0; }
 
 @font-face {
   font-family:'Maplist';
-    src:url('fonts/maplist-51e4fc65f8750b7e4cded69c9077e623.eot');
-    src:url('fonts/maplist-51e4fc65f8750b7e4cded69c9077e623.eot?#iefix') format('embedded-opentype'),
-        url('fonts/maplist-51e4fc65f8750b7e4cded69c9077e623.woff') format('woff');
+    src:url('fonts/maplist-31ace7897028fda5704e9d6a970be3e5.eot');
+    src:url('fonts/maplist-31ace7897028fda5704e9d6a970be3e5.eot?#iefix') format('embedded-opentype'),
+        url('fonts/maplist-31ace7897028fda5704e9d6a970be3e5.woff') format('woff');
   font-weight:700;
   font-style:normal;
   }
@@ -92,12 +92,12 @@ textarea {
           box-sizing:border-box;
   }
 *::-webkit-scrollbar {
-  background:#f8f8f8;
+  background:#e6e6e6;
   width:15px;
   }
 *::-webkit-scrollbar-thumb {
   background:#9ea7ad;
-  border:5px #f8f8f8 solid;
+  border:5px #e6e6e6 solid;
   -webkit-border-radius:15px;
           border-radius:15px;
   }
@@ -370,7 +370,7 @@ textarea {
 .show         { display:block; }
 .hide         { display:none; }
 .deemphasize  { color:#888; }
-.center       { text-align:center; }
+.centered     { text-align:center; }
 .inline       { margin-right:10px; }
 
 .tip-top:after,
@@ -414,29 +414,46 @@ textarea {
             box-shadow:0 -1px 8px rgba(0,0,0,0.25);
     }
   .maker .add {
-    background:#3887be;
     position:relative;
     display:block;
     color:#73b6e6;
+    border-top:1px solid #3887be;
+    border-bottom:1px solid #9ea7ad;
     -webkit-font-smoothing:subpixel-antialiased;
     }
     .maker .add:hover {
       color:#90c5eb;
       }
     .maker .add:active {
-      box-shadow:inset 0 8px 8px -8px rgba(0,0,0,0.5);
+      -webkit-box-shadow:inset 0 8px 8px -8px rgba(56,135,190,0.25);
+              box-shadow:inset 0 8px 8px -8px rgba(56,135,190,0.25);
       }
       .maker .add.shadow {
         -webkit-box-shadow:0 4px 6px -4px rgba(0,0,0,0.25);
                 box-shadow:0 4px 6px -4px rgba(0,0,0,0.25);
         }
+    .maker .add .overlay {
+      background:#fff;
+      font-size:16px;
+      line-height:62px;
+      position:absolute;
+      width:100%;
+      height:100%;
+      top:0;left:0;
+      z-index:10;
+      display:none;
+      cursor:default;
+      }
+      .maker .add.on .overlay {
+        display:block;
+        }
 
 .markers {
+  background:#f8f8f8;
   max-height:249px;
   overflow:auto;
   }
   .markers > li {
-    height:79px;
     position:relative;
     border-bottom:1px solid #9ea7ad;
     }
@@ -448,6 +465,7 @@ textarea {
   background:#f8f8f8;
   position:absolute;
   margin:10px 0;
+  top:0;
   right:20px;
   }
   .actions li {
