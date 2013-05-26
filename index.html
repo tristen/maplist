@@ -8,7 +8,18 @@
   <link rel='stylesheet' href='./app.css'>
 </head>
 <body>
-  <div id='map' class='map'></div>
+  <div id='map' class='map'>
+    <div id='controls' class='controls'>
+      <ul class='group round clearfix'>
+        <li><a id='findme' class='round' href='#'><span class='small icon icon-findme'></span></a></li>
+      </ul>
+      <ul class='group layers round clearfix'>
+        <li><a href='#' data-layer='tristen.map-4s93c8qx'><span class='small icon icon-streets'></span></a></li>
+        <li><a href='#' data-layer='tristen.map-ixqro653'><span class='small icon icon-terrain'></span></a></li>
+        <li><a href='#' data-layer='tristen.map-sx6sssbx'><span class='small icon icon-satellite'></span></a></li>
+      </ul>
+    </div>
+  </div>
 
   <div id='maker' class='maker-container pad2'>
     <div class='maker cell4'>
@@ -26,7 +37,7 @@
   <script data-template='introduction' type='text/html'>
     <a href='#' id='permalink' class='permalink'><span class='icon icon-link small'></span></a>
     <input id='title' type='text' name='title' placeholder='List Name' value='<%= title %>' />
-    <textarea id='description' name='description' placeholder='Description'><%= description %></textarea>
+    <textarea id='description' name='description' placeholder='Description'><% if (description !== 'Description') { %><%= description %><% } %></textarea>
   </script>
 
   <script data-template='marker' type='text/html'>

@@ -27,7 +27,7 @@ var _downLock = false;
 var _clickTimeout = false;
 
 var m = document.getElementById('map');
-var map = mapbox.map(m, mapbox.layer().id('tristen.map-ixqro653'));
+var map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 
 // If a hash exists and is an encoded string, parse it.
 if (window.location.hash &&
@@ -137,16 +137,25 @@ function addMarker(pos) {
             },
             'properties': {
                 'id': id,
-                'marker-color': hex
+                'marker-color': hex,
+                'title': 'Marker Name',
+                'description': 'Description'
             }
         });
 
         renderMarkers(function() {
-            // center the map on where it was selected.
+            // Center the map on where it was selected.
             map.ease.location({
                 lat: l.lat,
                 lon: l.lon
             }).zoom(map.zoom()).optimal();
+
+            // Show tooltip
+            _(marker.markers()).each(function(m, i) {
+                if (m.data.properties.id === id) {
+                    marker.markers()[i].showTooltip();
+                }
+            });
 
             markerAdded();
         });
@@ -170,6 +179,9 @@ function renderMarkers(cb) {
     map.addLayer(marker);
     set = false;
 
+    // Edits have been made, delete any location hash
+    document.location.hash = '';
+
     if (cb) cb();
 }
 
@@ -181,10 +193,7 @@ d3.select('.add').on('click', function() {
         d3.event.preventDefault();
 
         this.className += ' on';
-
         set = true;
-        m.style.cursor = 'crosshair';
-
         d3.select(map.parent).on('mousedown', onDown);
         d3.select(map.parent).on('touchstart', onDown);
     }
@@ -212,9 +221,11 @@ function markerInteraction(id) {
         populateColors(el, id);
     });
 
-    d3.select('.' + id).select('input').call(function(el) {
-        updateMarkerContent(el, id, 'title');
-    });
+    d3.select('.' + id).select('input')
+        .attr('data-id', id)
+        .call(function(el) {
+            updateMarkerContent(el, 'title');
+        });
 
     d3.select('.' + id).select('textarea')
         .on('change', resize)
@@ -222,23 +233,33 @@ function markerInteraction(id) {
         .on('paste', resize)
         .on('drop', resize)
         .on('keydown', resize)
+        .attr('data-id', id)
         .call(function(el) {
-            updateMarkerContent(el, id, 'description');
+            updateMarkerContent(el, 'description');
         });
 }
 
-function updateMarkerContent(el, id, type) {
+function updateMarkerContent(el, type) {
     el
         .on('change', function() {
             var value = el.property('value');
+            var id = el.attr('data-id');
+
             _(geojson.features).each(function(f) {
-                if (f.properties.id === id) {
+                if (f.properties.id && f.properties.id === id) {
                    f.properties[type] = value;
                 }
             });
 
             _(marker.markers()).each(function(m, i) {
-                if (m.data.properties.id === id) {
+                if (m.data.properties && m.data.properties.id === id) {
+
+                    // Center the map to the point.
+                    map.ease.location({
+                        lat: marker.markers()[i].location.lat,
+                        lon: marker.markers()[i].location.lon
+                    }).zoom(map.zoom()).optimal();
+
                     marker.markers()[i].showTooltip();
                 }
             });
@@ -364,3 +385,27 @@ d3.select('#permalink').on('click', function() {
     // Update the location object with the current coordinates
     window.location.hash = Base64.encodeURI(JSON.stringify(geojson));
 });
+
+// Layer Switching
+d3.select('.layers').selectAll('a').on('click', function() {
+    d3.event.stopPropagation();
+    d3.event.preventDefault();
+
+    var layerId = this.getAttribute('data-layer');
+
+    map.removeLayer(mapbox.layer().id(geojson.layer));
+    map.addLayer(mapbox.layer().id(layerId));
+
+    geojson.layer = layerId;
+    d3.select('.layers').selectAll('a').classed('active', null);
+    this.className += ' active';
+});
+
+// Add an active class to the element
+// where geojson.layer matches
+d3.select('.layers').selectAll('a')
+    .classed('active', function() {
+        if (this.getAttribute('data-layer') === geojson.layer) {
+            return true;
+        }
+    });
