@@ -409,3 +409,23 @@ d3.select('.layers').selectAll('a')
             return true;
         }
     });
+
+// Find me link
+d3.select('#findme').on('click', function() {
+    d3.event.stopPropagation();
+    d3.event.preventDefault();
+    this.className += ' active';
+
+    if (navigator.geolocation) getLocation();
+});
+
+function getLocation() {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        map.ease.location({
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude
+        }).zoom(18).optimal(0.9, 1.42, function() {
+            d3.select('#findme').classed('active', null);
+        });
+    });
+}
