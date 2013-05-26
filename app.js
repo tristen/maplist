@@ -5,7 +5,6 @@ var d3 = require('d3');
 var intent = require('hoverintent');
 var base64 = require('js-base64').Base64;
 var icons = require('./src/icons.js');
-var utils = require('./src/utils.js');
 var geojson = require('./src/markers.geojson');
 
 // Compile templates into an object

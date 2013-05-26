@@ -15,7 +15,6 @@ LIBS = \
 
 APPLICATION = \
 	src/icons.js \
-	src/utils.js \
 	src/markers.geojson \
 	app.js
 
