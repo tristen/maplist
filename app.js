@@ -194,7 +194,7 @@ function markerAdded() {
     d3.select('.add').classed('on', null);
 
     d3.select('#markers')
-        .insert('li', '.markers')
+        .insert('li', 'li:first-child')
         .classed('clearfix pad2 ' + id, true)
         .html(templates.marker({
             hex: hex
