@@ -11,13 +11,12 @@ clean:
 	rm -f dist/*
 
 LIBS = \
-	src/mapbox.js \
-	src/codemirror/codemirror.js \
-	src/codemirror/markdown.js \
-	src/codemirror/gfm.js
+	src/mapbox.js
 
 APPLICATION = \
 	src/icons.js \
+	src/utils.js \
+	src/markers.geojson \
 	app.js
 
 dist/maplist.js: $(APPLICATION) $(LIBS)

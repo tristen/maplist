@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset='UTF-8'/>
-  <title>Create a sharable list of things on map</title>
+  <title>Maplist</title>
   <meta name='apple-mobile-web-app-status-bar-style' content='white' />
   <link rel='shortcut icon' href='./img/favicon.ico' type='image/x-icon' />
   <link rel='stylesheet' href='./app.css'>
@@ -12,28 +12,49 @@
 
   <div id='maker' class='maker-container pad2'>
     <div class='maker cell4'>
-      <div class='introduction pad2'>
-        <input id='title' type='text' name='title' placeholder='Title' />
-        <textarea id='about' name='about' placeholder='Introduction'></textarea>
-      </div>
       <a href='#' class='add clearfix pad2'>
-        <span class='icon icon-add inline'></span>Add Marker
-        <div class='centered overlay'>Click on the map to select a point.</div>
+        <span class='icon icon-add inline'></span>Add a marker
+        <div class='centered overlay'>
+          <span class='icon icon-cursor inline'></span>
+          Click on the map to select a point.
+        </div>
       </a>
       <ul class='markers' id='markers'></ul>
     </div>
   </div>
 
+  <script data-template='introduction' type='text/html'>
+    <a href='#' id='permalink' class='permalink'><span class='icon icon-link small'></span></a>
+    <input id='title' type='text' name='title' placeholder='List Name' value='<%= title %>' />
+    <textarea id='description' name='description' placeholder='Description'><%= description %></textarea>
+  </script>
+
   <script data-template='marker' type='text/html'>
     <a href='#' class='fl inline marker hover'>
-      <span class='icon icon-marker' style='color:#<%= hex %>'></span>
+      <span class='icon icon-marker' style='color:<%= hex %>'></span>
       <div class='popup round arrow-left'>
         <ul class='color-grid' class='clearfix'></ul>
       </div>
     </a>
     <div class='fl details'>
-      <input type='text' name='title' placeholder='Title' />
+      <input type='text' name='title' placeholder='Marker Name' />
       <textarea name='description' placeholder='Description'></textarea>
+      <ul class='actions fr'>
+        <li><a href='#' class='icon icon-rubbish small'></a></li>
+      </ul>
+    </div>
+  </script>
+
+  <script data-template='markerCached' type='text/html'>
+    <a href='#' class='fl inline marker hover'>
+      <span class='icon icon-marker' style='color:<%= hex %>'></span>
+      <div class='popup round arrow-left'>
+        <ul class='color-grid' class='clearfix'></ul>
+      </div>
+    </a>
+    <div class='fl details'>
+      <input type='text' name='title' placeholder='Marker Name' value='<%= title %>' />
+      <textarea name='description' placeholder='Description'><%= description %></textarea>
       <ul class='actions fr'>
         <li><a href='#' class='icon icon-rubbish small'></a></li>
       </ul>

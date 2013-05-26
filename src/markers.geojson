@@ -1,4 +1,11 @@
 module.exports =  { 
   "type": "FeatureCollection",
+  "title": "List name",
+  "description": "Description",
+  "location": {
+    "lat":28,
+    "lon":-9.50,
+    "zoom":3
+  },
   "features": []
 }
