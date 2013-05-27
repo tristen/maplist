@@ -41,11 +41,11 @@ if (window.location.hash &&
     // Render any known points
     // and list items to the map.
     renderKnown();
-} else {
-    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
-
+} else if (hasSession()) {
     // Check if a sessionStorage exists
     stashApply();
+} else {
+    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 }
 
 map.addCallback('drawn', stash);
@@ -378,6 +378,14 @@ function stash() {
     store.setItem('session', Base64.encodeURI(JSON.stringify(geojson)));
 }
 
+function hasSession() {
+    if (!window.sessionStorage) return false;
+    var store = window.sessionStorage;
+    var session = store.getItem('session');
+
+    return session ? true : false;
+}
+
 function stashApply() {
     if (!window.sessionStorage) return false;
     var store = window.sessionStorage;
@@ -386,6 +394,8 @@ function stashApply() {
     if (session) {
         var decode = window.atob(session);
         geojson = JSON.parse(decode);
+
+        map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 
         // Render any known points and list items to the page.
         renderKnown();
@@ -448,8 +458,8 @@ d3.select('.layers').selectAll('a').on('click', function() {
 
     // Stack our new layer followed by our marker(s)
     map.addLayer(mapbox.layer().id(layerId));
-    map.addLayer(marker);
 
+    if (marker) map.addLayer(marker);
     geojson.layer = layerId;
 
     d3.select('.layers').selectAll('a').classed('active', null);
