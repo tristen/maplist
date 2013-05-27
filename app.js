@@ -231,7 +231,7 @@ function markerInteraction(id) {
     d3.select('.' + id).select('input')
         .attr('data-id', id)
         .call(function(el) {
-            changedContent(el, 'title');
+            markerContentChange(el, 'title');
         });
 
     d3.select('.' + id).select('textarea')
@@ -240,54 +240,38 @@ function markerInteraction(id) {
         .on('paste', resize)
         .on('drop', resize)
         .on('keydown', resize)
-        .on('keyup', contentChange)
         .attr('data-id', id)
         .call(function(el) {
-            changedContent(el, 'description');
+            markerContentChange(el, 'description');
         });
 }
 
-function contentChange() {
-    var value = d3.select(this).property('value');
-    var id = this.getAttribute('data-id');
-    var type = 'description';
-
-    updateMarkerContent(id, value, type);
-
-    // 27: esc 13: enter 9: tab
-    if (d3.event.keyCode === 27 &&
-        d3.event.keyCode === 13 &&
-        d3.event.keyCode === 9) {
-    }
-}
-
-function updateMarkerContent(id, value, type) {
-    _(geojson.features).each(function(f) {
-        if (f.properties.id && f.properties.id === id) {
-           f.properties[type] = value;
-        }
-    });
-
-    _(marker.markers()).each(function(m, i) {
-        if (m.data.properties && m.data.properties.id === id) {
-
-            // Center the map to the point.
-            map.ease.location({
-                lat: marker.markers()[i].location.lat,
-                lon: marker.markers()[i].location.lon
-            }).zoom(map.zoom()).optimal();
-
-            marker.markers()[i].showTooltip();
-        }
-    });
-}
-
-function changedContent(el, type) {
+function markerContentChange(el, type) {
     el
-        .on('change', function() {
+        .on('keyup', function() {
             var value = el.property('value');
             var id = el.attr('data-id');
-            updateMarkerContent(id, value, type);
+            //var value = d3.select(this).property('value');
+            //var id = this.getAttribute('data-id');
+
+            _(geojson.features).each(function(f) {
+                if (f.properties.id && f.properties.id === id) {
+                   f.properties[type] = value;
+                }
+            });
+
+            _(marker.markers()).each(function(m, i) {
+                if (m.data.properties && m.data.properties.id === id) {
+
+                    // Center the map to the point.
+                    map.ease.location({
+                        lat: marker.markers()[i].location.lat,
+                        lon: marker.markers()[i].location.lon
+                    }).zoom(map.zoom()).optimal();
+
+                    marker.markers()[i].showTooltip();
+                }
+            });
         });
 }
 
