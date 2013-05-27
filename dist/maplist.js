@@ -41,6 +41,7 @@ d3.selectAll('script[data-template]').each(function() {
 // Some setup
 var set;
 var id;
+var map;
 var hex = '#5a8cd2';
 var marker;
 var fromHash;
@@ -51,15 +52,15 @@ var _downLock = false;
 var _clickTimeout = false;
 
 var m = document.getElementById('map');
-var map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 
 // If a hash exists and is an encoded string, parse it.
 if (window.location.hash &&
-    /^[A-Za-z0-9+/]{8}/.test(window.location.hash.split('#').pop())) {
-
+    /^[A-Za-z0-9+\/]{8}/.test(window.location.hash.split('#').pop())) {
     var encoded = window.location.hash.split('#').pop();
     var decode = window.atob(encoded);
     geojson = JSON.parse(decode);
+
+    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
     renderMarkers();
 
     // Render any known features
@@ -76,7 +77,15 @@ if (window.location.hash &&
             }));
 
         markerInteraction(id);
+
+        // Resize textareas to account for saved content in them
+        d3.select('.' + id).select('textarea')
+            .style('height', function() {
+                this.scrollHeight + 'px'
+            });
     });
+} else {
+    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 }
 
 map.centerzoom({
@@ -181,6 +190,7 @@ function addMarker(pos) {
                 }
             });
 
+            document.location.hash = '';
             markerAdded();
         });
     }
@@ -202,9 +212,6 @@ function renderMarkers(cb) {
     mapbox.markers.interaction(marker);
     map.addLayer(marker);
     set = false;
-
-    // Edits have been made, delete any location hash
-    document.location.hash = '';
 
     if (cb) cb();
 }
@@ -248,7 +255,7 @@ function markerInteraction(id) {
     d3.select('.' + id).select('input')
         .attr('data-id', id)
         .call(function(el) {
-            updateMarkerContent(el, 'title');
+            changedContent(el, 'title');
         });
 
     d3.select('.' + id).select('textarea')
@@ -257,36 +264,54 @@ function markerInteraction(id) {
         .on('paste', resize)
         .on('drop', resize)
         .on('keydown', resize)
+        .on('keyup', contentChange)
         .attr('data-id', id)
         .call(function(el) {
-            updateMarkerContent(el, 'description');
+            changedContent(el, 'description');
         });
 }
 
-function updateMarkerContent(el, type) {
+function contentChange() {
+    var value = d3.select(this).property('value');
+    var id = this.getAttribute('data-id');
+    var type = 'description';
+
+    updateMarkerContent(id, value, type);
+
+    // 27: esc 13: enter 9: tab
+    if (d3.event.keyCode === 27 &&
+        d3.event.keyCode === 13 &&
+        d3.event.keyCode === 9) {
+    }
+}
+
+function updateMarkerContent(id, value, type) {
+    _(geojson.features).each(function(f) {
+        if (f.properties.id && f.properties.id === id) {
+           f.properties[type] = value;
+        }
+    });
+
+    _(marker.markers()).each(function(m, i) {
+        if (m.data.properties && m.data.properties.id === id) {
+
+            // Center the map to the point.
+            map.ease.location({
+                lat: marker.markers()[i].location.lat,
+                lon: marker.markers()[i].location.lon
+            }).zoom(map.zoom()).optimal();
+
+            marker.markers()[i].showTooltip();
+        }
+    });
+}
+
+function changedContent(el, type) {
     el
         .on('change', function() {
             var value = el.property('value');
             var id = el.attr('data-id');
-
-            _(geojson.features).each(function(f) {
-                if (f.properties.id && f.properties.id === id) {
-                   f.properties[type] = value;
-                }
-            });
-
-            _(marker.markers()).each(function(m, i) {
-                if (m.data.properties && m.data.properties.id === id) {
-
-                    // Center the map to the point.
-                    map.ease.location({
-                        lat: marker.markers()[i].location.lat,
-                        lon: marker.markers()[i].location.lon
-                    }).zoom(map.zoom()).optimal();
-
-                    marker.markers()[i].showTooltip();
-                }
-            });
+            updateMarkerContent(id, value, type);
         });
 }
 
@@ -321,7 +346,9 @@ function markerColor(el) {
         d3.select('.' + markerId).select('.icon-marker')
             .style('color', color);
 
-        renderMarkers();
+        renderMarkers(function() {
+            document.location.hash = '';
+        });
     });
 }
 
@@ -338,7 +365,9 @@ function removeMarker(el) {
             return f.properties.id !== marker;
         });
 
-        renderMarkers();
+        renderMarkers(function() {
+            document.location.hash = '';
+        });
     });
 }
 
@@ -404,7 +433,7 @@ d3.select('#permalink').on('click', function() {
         lon: location.lon.toFixed(3),
         lat: location.lat.toFixed(3),
         zoom: map.zoom().toFixed()
-    }
+    };
 
     // Update the location object with the current coordinates
     window.location.hash = Base64.encodeURI(JSON.stringify(geojson));
@@ -421,6 +450,7 @@ d3.select('.layers').selectAll('a').on('click', function() {
     map.addLayer(mapbox.layer().id(layerId));
 
     geojson.layer = layerId;
+
     d3.select('.layers').selectAll('a').classed('active', null);
     this.className += ' active';
 });
@@ -454,7 +484,7 @@ function getLocation() {
     });
 }
 
-},{"./src/icons.js":1,"./src/markers.geojson":2,"underscore":4,"hoverintent":5,"d3":6,"js-base64":7}],4:[function(require,module,exports){
+},{"./src/icons.js":1,"./src/markers.geojson":2,"underscore":4,"d3":5,"hoverintent":6,"js-base64":7}],4:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -1683,7 +1713,7 @@ function getLocation() {
 }).call(this);
 
 })()
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 (function(){(function(global){var hoverintent=function(el,over,out){var x,y,pX,pY;var h={},state=0,timer=0;var options={sensitivity:7,interval:100,timeout:0};var defaults=function(opt){options=merge(opt||{},options)};var merge=function(obj){for(var i=1;i<arguments.length;i++){var def=arguments[i];for(var n in def){if(obj[n]===undefined)obj[n]=def[n]}}return obj};var addEvent=function(object,event,method){if(object.attachEvent){object["e"+event+method]=method;object[event+method]=function(){object["e"+event+method](window.event)};object.attachEvent("on"+event,object[event+method])}else{object.addEventListener(event,method,false)}};var removeEvent=function(object,event,method){if(object.detachEvent){object.detachEvent("on"+event,object[event+method]);object[event+method]=null}else{object.removeEventListener(event,method,false)}};var track=function(e){x=e.pageX;y=e.pageY};var delay=function(el,outEvent,e){if(timer)timer=clearTimeout(timer);state=0;return outEvent.call(el,e)};var dispatch=function(e,event,over){var el=e.currentTarget;if(timer)timer=clearTimeout(timer);if(over){pX=e.pageX;pY=e.pageY;addEvent(el,"mousemove",track(e));if(state!==1){timer=setTimeout(function(){compare(el,event,e)},options.interval)}}else{removeEvent(el,"mousemove",track(e));if(state===1){timer=setTimeout(function(){delay(el,event,e)},options.timeout)}}return this};var compare=function(el,overEvent,e){if(timer)timer=clearTimeout(timer);if(Math.abs(pX-x)+Math.abs(pY-y)<options.sensitivity){removeEvent(el,"mousemove",track);state=1;return overEvent.call(el,e)}else{pX=x;pY=y;timer=setTimeout(function(){compare(el,overEvent,e)},options.interval)}};h.options=function(opt){defaults(opt)};if(el){addEvent(el,"mouseover",function(e){dispatch(e,over,true)});addEvent(el,"mouseout",function(e){dispatch(e,out)})}defaults();return h};global.hoverintent=hoverintent;if(typeof module!=="undefined")module.exports=hoverintent})(this);
 })()
 },{}],7:[function(require,module,exports){
@@ -1863,7 +1893,7 @@ function getLocation() {
 })(this);
 
 })()
-},{"buffer":8}],6:[function(require,module,exports){
+},{"buffer":8}],5:[function(require,module,exports){
 (function(){require("./d3");
 module.exports = d3;
 (function () { delete this.d3; })(); // unset global

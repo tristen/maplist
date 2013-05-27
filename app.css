@@ -70,9 +70,9 @@ table { border-collapse: collapse; border-spacing:0; }
 
 @font-face {
   font-family:'Maplist';
-    src:url('fonts/maplist-bd6ec9d193fc76cbf1dea9a54e71b457.eot');
-    src:url('fonts/maplist-bd6ec9d193fc76cbf1dea9a54e71b457.eot?#iefix') format('embedded-opentype'),
-        url('fonts/maplist-bd6ec9d193fc76cbf1dea9a54e71b457.woff') format('woff');
+    src:url('fonts/maplist-6acb817f88555a182b753b101e1b9cbd.eot');
+    src:url('fonts/maplist-6acb817f88555a182b753b101e1b9cbd.eot?#iefix') format('embedded-opentype'),
+        url('fonts/maplist-6acb817f88555a182b753b101e1b9cbd.woff') format('woff');
   font-weight:700;
   font-style:normal;
   }
@@ -283,7 +283,7 @@ textarea {
   /* Set a short height to start as
    * all textarea's in the interface
    * are managed in javascript */
-  height:30px;
+  height:auto;
   overflow:hidden;
   }
 

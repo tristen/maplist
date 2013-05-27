@@ -17,6 +17,7 @@ d3.selectAll('script[data-template]').each(function() {
 // Some setup
 var set;
 var id;
+var map;
 var hex = '#5a8cd2';
 var marker;
 var fromHash;
@@ -27,15 +28,15 @@ var _downLock = false;
 var _clickTimeout = false;
 
 var m = document.getElementById('map');
-var map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 
 // If a hash exists and is an encoded string, parse it.
 if (window.location.hash &&
-    /^[A-Za-z0-9+/]{8}/.test(window.location.hash.split('#').pop())) {
-
+    /^[A-Za-z0-9+\/]{8}/.test(window.location.hash.split('#').pop())) {
     var encoded = window.location.hash.split('#').pop();
     var decode = window.atob(encoded);
     geojson = JSON.parse(decode);
+
+    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
     renderMarkers();
 
     // Render any known features
@@ -52,7 +53,15 @@ if (window.location.hash &&
             }));
 
         markerInteraction(id);
+
+        // Resize textareas to account for saved content in them
+        d3.select('.' + id).select('textarea')
+            .style('height', function() {
+                this.scrollHeight + 'px'
+            });
     });
+} else {
+    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 }
 
 map.centerzoom({
@@ -157,6 +166,7 @@ function addMarker(pos) {
                 }
             });
 
+            document.location.hash = '';
             markerAdded();
         });
     }
@@ -178,9 +188,6 @@ function renderMarkers(cb) {
     mapbox.markers.interaction(marker);
     map.addLayer(marker);
     set = false;
-
-    // Edits have been made, delete any location hash
-    document.location.hash = '';
 
     if (cb) cb();
 }
@@ -224,7 +231,7 @@ function markerInteraction(id) {
     d3.select('.' + id).select('input')
         .attr('data-id', id)
         .call(function(el) {
-            updateMarkerContent(el, 'title');
+            changedContent(el, 'title');
         });
 
     d3.select('.' + id).select('textarea')
@@ -233,36 +240,54 @@ function markerInteraction(id) {
         .on('paste', resize)
         .on('drop', resize)
         .on('keydown', resize)
+        .on('keyup', contentChange)
         .attr('data-id', id)
         .call(function(el) {
-            updateMarkerContent(el, 'description');
+            changedContent(el, 'description');
         });
 }
 
-function updateMarkerContent(el, type) {
+function contentChange() {
+    var value = d3.select(this).property('value');
+    var id = this.getAttribute('data-id');
+    var type = 'description';
+
+    updateMarkerContent(id, value, type);
+
+    // 27: esc 13: enter 9: tab
+    if (d3.event.keyCode === 27 &&
+        d3.event.keyCode === 13 &&
+        d3.event.keyCode === 9) {
+    }
+}
+
+function updateMarkerContent(id, value, type) {
+    _(geojson.features).each(function(f) {
+        if (f.properties.id && f.properties.id === id) {
+           f.properties[type] = value;
+        }
+    });
+
+    _(marker.markers()).each(function(m, i) {
+        if (m.data.properties && m.data.properties.id === id) {
+
+            // Center the map to the point.
+            map.ease.location({
+                lat: marker.markers()[i].location.lat,
+                lon: marker.markers()[i].location.lon
+            }).zoom(map.zoom()).optimal();
+
+            marker.markers()[i].showTooltip();
+        }
+    });
+}
+
+function changedContent(el, type) {
     el
         .on('change', function() {
             var value = el.property('value');
             var id = el.attr('data-id');
-
-            _(geojson.features).each(function(f) {
-                if (f.properties.id && f.properties.id === id) {
-                   f.properties[type] = value;
-                }
-            });
-
-            _(marker.markers()).each(function(m, i) {
-                if (m.data.properties && m.data.properties.id === id) {
-
-                    // Center the map to the point.
-                    map.ease.location({
-                        lat: marker.markers()[i].location.lat,
-                        lon: marker.markers()[i].location.lon
-                    }).zoom(map.zoom()).optimal();
-
-                    marker.markers()[i].showTooltip();
-                }
-            });
+            updateMarkerContent(id, value, type);
         });
 }
 
@@ -297,7 +322,9 @@ function markerColor(el) {
         d3.select('.' + markerId).select('.icon-marker')
             .style('color', color);
 
-        renderMarkers();
+        renderMarkers(function() {
+            document.location.hash = '';
+        });
     });
 }
 
@@ -314,7 +341,9 @@ function removeMarker(el) {
             return f.properties.id !== marker;
         });
 
-        renderMarkers();
+        renderMarkers(function() {
+            document.location.hash = '';
+        });
     });
 }
 
@@ -380,7 +409,7 @@ d3.select('#permalink').on('click', function() {
         lon: location.lon.toFixed(3),
         lat: location.lat.toFixed(3),
         zoom: map.zoom().toFixed()
-    }
+    };
 
     // Update the location object with the current coordinates
     window.location.hash = Base64.encodeURI(JSON.stringify(geojson));
@@ -397,6 +426,7 @@ d3.select('.layers').selectAll('a').on('click', function() {
     map.addLayer(mapbox.layer().id(layerId));
 
     geojson.layer = layerId;
+
     d3.select('.layers').selectAll('a').classed('active', null);
     this.className += ' active';
 });
