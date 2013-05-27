@@ -432,7 +432,7 @@ input:-moz-placeholder           { color:#506879; }
 /* Application Styling
 ------------------------------------------------------- */
 .map {
-  background:#73b6e6;
+  background:transparent url(img/bg.png) repeat 0 0;
   position:absolute;
   width:100%;
   height:100%;
