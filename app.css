@@ -494,8 +494,8 @@ input:-moz-placeholder           { color:#506879; }
   }
   .maker {
     background:#fff;
-    -webkit-box-shadow:0 -1px 8px rgba(0,0,0,0.25);
-            box-shadow:0 -1px 8px rgba(0,0,0,0.25);
+    -webkit-box-shadow:0 0 6px rgba(0,0,0,0.25);
+            box-shadow:0 0 6px rgba(0,0,0,0.25);
     }
   .maker .add {
     position:relative;

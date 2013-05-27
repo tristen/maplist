@@ -73,6 +73,7 @@ if (window.location.hash &&
 }
 
 map.addCallback('drawn', stash);
+
 map.centerzoom({
     lat: geojson.location.lat,
     lon: geojson.location.lon }, geojson.location.zoom);
@@ -398,6 +399,9 @@ function stash() {
     if (!window.sessionStorage) return false;
     var store = window.sessionStorage;
 
+    // Remove a previous entry
+    if (store.session) store.removeItem('session');
+
     setCoordinates();
     store.setItem('session', Base64.encodeURI(JSON.stringify(geojson)));
 }
@@ -419,7 +423,10 @@ function stashApply() {
         var decode = window.atob(session);
         geojson = JSON.parse(decode);
 
+        // console.log(decode);
+        // console.log(geojson);
         map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+
         // Render any known points and list items to the page.
         renderKnown();
     }
@@ -454,9 +461,9 @@ function setCoordinates() {
     var pos = map.getCenter();
 
     geojson.location = {
-        lon: pos.lon.toFixed(3),
-        lat: pos.lat.toFixed(3),
-        zoom: map.zoom().toFixed()
+        lon: parseInt(pos.lon.toFixed(3), 10),
+        lat: parseInt(pos.lat.toFixed(3), 10),
+        zoom: parseInt(map.zoom().toFixed(), 10)
     };
 }
 
@@ -521,7 +528,7 @@ function getLocation() {
     });
 }
 
-},{"./src/icons.js":1,"./src/markers.geojson":2,"underscore":4,"d3":5,"hoverintent":6,"js-base64":7}],4:[function(require,module,exports){
+},{"./src/icons.js":1,"./src/markers.geojson":2,"d3":4,"underscore":5,"hoverintent":6,"js-base64":7}],5:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -1930,7 +1937,7 @@ function getLocation() {
 })(this);
 
 })()
-},{"buffer":8}],5:[function(require,module,exports){
+},{"buffer":8}],4:[function(require,module,exports){
 (function(){require("./d3");
 module.exports = d3;
 (function () { delete this.d3; })(); // unset global
