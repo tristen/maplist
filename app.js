@@ -386,12 +386,11 @@ d3.select('#permalink').on('click', function() {
     d3.event.stopPropagation();
     d3.event.preventDefault();
 
-    var pos = new MM.Point(d3.event.clientX, d3.event.clientY);
-    var location = map.pointLocation(pos);
+    var pos = map.getCenter();
 
     geojson.location = {
-        lon: location.lon.toFixed(3),
-        lat: location.lat.toFixed(3),
+        lon: pos.lon.toFixed(3),
+        lat: pos.lat.toFixed(3),
         zoom: map.zoom().toFixed()
     };
 
