@@ -406,8 +406,11 @@ d3.select('.layers').selectAll('a').on('click', function() {
 
     var layerId = this.getAttribute('data-layer');
 
-    map.removeLayer(mapbox.layer().id(geojson.layer));
+    map.removeLayer(geojson.layer);
+
+    // Stack our new layer followed by our marker(s)
     map.addLayer(mapbox.layer().id(layerId));
+    map.addLayer(marker);
 
     geojson.layer = layerId;
 
