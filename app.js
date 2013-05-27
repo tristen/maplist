@@ -37,33 +37,18 @@ if (window.location.hash &&
     geojson = JSON.parse(decode);
 
     map = mapbox.map(m, mapbox.layer().id(geojson.layer));
-    renderMarkers();
 
-    // Render any known features
-    _(geojson.features).each(function(f) {
-        var id = f.properties.id;
-
-        d3.select('#markers')
-            .insert('li', '.markers')
-            .classed('clearfix pad2 ' + id, true)
-            .html(templates.markerCached({
-                title: f.properties.title,
-                description: f.properties.description,
-                hex: f.properties['marker-color']
-            }));
-
-        markerInteraction(id);
-
-        // Resize textareas to account for saved content in them
-        d3.select('.' + id).select('textarea')
-            .style('height', function() {
-                this.scrollHeight + 'px'
-            });
-    });
+    // Render any known points
+    // and list items to the map.
+    renderKnown();
 } else {
     map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+
+    // Check if a sessionStorage exists
+    stashApply();
 }
 
+map.addCallback('drawn', stash);
 map.centerzoom({
     lat: geojson.location.lat,
     lon: geojson.location.lon }, geojson.location.zoom);
@@ -188,6 +173,9 @@ function renderMarkers(cb) {
     mapbox.markers.interaction(marker);
     map.addLayer(marker);
     set = false;
+
+    // Stash contents in session storage
+    stash();
 
     if (cb) cb();
 }
@@ -382,10 +370,54 @@ function updateIntroduction(el, type) {
         });
 }
 
-d3.select('#permalink').on('click', function() {
-    d3.event.stopPropagation();
-    d3.event.preventDefault();
+function stash() {
+    if (!window.sessionStorage) return false;
+    var store = window.sessionStorage;
 
+    setCoordinates();
+    store.setItem('session', Base64.encodeURI(JSON.stringify(geojson)));
+}
+
+function stashApply() {
+    if (!window.sessionStorage) return false;
+    var store = window.sessionStorage;
+    var session = store.getItem('session');
+
+    if (session) {
+        var decode = window.atob(session);
+        geojson = JSON.parse(decode);
+
+        // Render any known points and list items to the page.
+        renderKnown();
+    }
+}
+
+function renderKnown() {
+    // Render any known features
+    _(geojson.features).each(function(f) {
+        var id = f.properties.id;
+
+        d3.select('#markers')
+            .insert('li', '.markers')
+            .classed('clearfix pad2 ' + id, true)
+            .html(templates.markerCached({
+                title: f.properties.title,
+                description: f.properties.description,
+                hex: f.properties['marker-color']
+            }));
+
+        renderMarkers();
+        markerInteraction(id);
+
+        // Resize textareas to account for saved content in them
+        d3.select('.' + id).select('textarea')
+            .style('height', function() {
+                return this.scrollHeight + 'px';
+            });
+    });
+}
+
+function setCoordinates() {
     var pos = map.getCenter();
 
     geojson.location = {
@@ -393,6 +425,13 @@ d3.select('#permalink').on('click', function() {
         lat: pos.lat.toFixed(3),
         zoom: map.zoom().toFixed()
     };
+}
+
+d3.select('#permalink').on('click', function() {
+    d3.event.stopPropagation();
+    d3.event.preventDefault();
+
+    setCoordinates();
 
     // Update the location object with the current coordinates
     window.location.hash = Base64.encodeURI(JSON.stringify(geojson));
@@ -415,6 +454,9 @@ d3.select('.layers').selectAll('a').on('click', function() {
 
     d3.select('.layers').selectAll('a').classed('active', null);
     this.className += ' active';
+
+    // Stash contents in session storage
+    stash();
 });
 
 // Add an active class to the element
