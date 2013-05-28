@@ -1,4 +1,5 @@
-# MapList - Create a list of things on a Map
+# MapList
+Create a list of things on a Map
 
 
 ### Features
