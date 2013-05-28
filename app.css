@@ -268,12 +268,16 @@ input[type=text] {
   background-color:transparent;
   border:none;
   margin:0;
-  padding:0;
+  padding:1px 4px;
+  -webkit-border-radius:4px;
+          border-radius:4px;
   }
   textarea:focus,
   input[type=text]:focus {
-    outline:none; /* ie8 below */
+    outline:0;
+    outline:thin dotted \9;
     color:#404040;
+    background:#fff;
     }
 
 textarea {
@@ -391,7 +395,7 @@ input:-moz-placeholder           { color:#506879; }
 .hide         { display:none; }
 .deemphasize  { color:#888; }
 .centered     { text-align:center; }
-.inline       { margin-right:12px; }
+.inline       { margin-right:10px; }
 
 .round {
   -webkit-border-radius:4px;

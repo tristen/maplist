@@ -206,7 +206,7 @@ function markerAdded() {
         .classed('clearfix pad2 ' + id, true)
         .html(templates.marker({
             hex: hex
-        }));
+        })).select('input').node().focus();
 
     markerInteraction(id);
 }
