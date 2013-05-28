@@ -101,7 +101,7 @@ function onDown() {
 
 function onUp() {
     var evt = {};
-    var pos = new mm.point(d3.event.clientx, d3.event.clienty);
+    var pos = new MM.Point(d3.event.clientX, d3.event.clientY);
     _downLock = false;
 
     for (var key in d3.event) { evt[key] = d3.event[key]; }
