@@ -64,7 +64,9 @@ if (window.location.hash &&
 
     // Render any known points
     // and list items to the map.
-    renderKnown();
+    _.defer(function() {
+        renderKnown();
+    });
 } else if (hasSession()) {
     // Check if a sessionStorage exists
     stashApply();
@@ -72,11 +74,11 @@ if (window.location.hash &&
     map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 }
 
-map.addCallback('drawn', stash);
-
 map.centerzoom({
     lat: geojson.location.lat,
     lon: geojson.location.lon }, geojson.location.zoom);
+
+map.addCallback('drawn', stash);
 
 function killTimeout() {
     if (_clickTimeout) {
@@ -285,6 +287,8 @@ function markerContentChange(el, type) {
                     marker.markers()[i].showTooltip();
                 }
             });
+
+            stash();
         });
 }
 
@@ -380,6 +384,10 @@ d3.select('#title')
 
 d3.select('#description')
     .call(function(el) {
+        el.style('height', function() {
+            return this.scrollHeight + 'px';
+        });
+
         updateIntroduction(el, 'description');
     })
     .on('cut', resize)
@@ -389,9 +397,10 @@ d3.select('#description')
 
 function updateIntroduction(el, type) {
     el
-        .on('change', function() {
+        .on('keyup', function() {
             var value = el.property('value');
             geojson[type] = value;
+            stash();
         });
 }
 
@@ -423,12 +432,14 @@ function stashApply() {
         var decode = window.atob(session);
         geojson = JSON.parse(decode);
 
-        // console.log(decode);
-        // console.log(geojson);
+         console.log(decode);
+         console.log(geojson);
         map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 
         // Render any known points and list items to the page.
-        renderKnown();
+        _.defer(function() {
+            renderKnown();
+        });
     }
 }
 
@@ -512,23 +523,26 @@ d3.select('.layers').selectAll('a')
 d3.select('#findme').on('click', function() {
     d3.event.stopPropagation();
     d3.event.preventDefault();
-    this.className += ' active';
-
     if (navigator.geolocation) getLocation();
 });
 
 function getLocation() {
     navigator.geolocation.getCurrentPosition(function(pos) {
-        map.ease.location({
+        map.centerzoom({
             lat: pos.coords.latitude,
-            lon: pos.coords.longitude
-        }).zoom(18).optimal(0.9, 1.42, function() {
-            d3.select('#findme').classed('active', null);
-        });
+            lon: pos.coords.longitude }, 18);
+
+        geojson.location = {
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+            zoom: 18
+        }
+
+        stash();
     });
 }
 
-},{"./src/icons.js":1,"./src/markers.geojson":2,"d3":4,"underscore":5,"hoverintent":6,"js-base64":7}],5:[function(require,module,exports){
+},{"./src/icons.js":1,"./src/markers.geojson":2,"underscore":4,"d3":5,"hoverintent":6,"js-base64":7}],4:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -1937,7 +1951,7 @@ function getLocation() {
 })(this);
 
 })()
-},{"buffer":8}],4:[function(require,module,exports){
+},{"buffer":8}],5:[function(require,module,exports){
 (function(){require("./d3");
 module.exports = d3;
 (function () { delete this.d3; })(); // unset global
