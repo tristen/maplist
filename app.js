@@ -445,14 +445,11 @@ function renderKnown() {
 
 function setCoordinates() {
     var pos = map.getCenter();
-
     geojson.location = {
         lon: pos.lon.toFixed(8),
         lat: pos.lat.toFixed(8),
         zoom: map.zoom().toFixed()
     };
-
-    window.location.hash = '';
 }
 
 d3.select('#permalink').on('click', function() {
