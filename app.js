@@ -54,7 +54,8 @@ map.centerzoom({
     lat: geojson.location.lat,
     lon: geojson.location.lon }, geojson.location.zoom);
 
-map.addCallback('drawn', stash);
+map.addCallback('panned', function() { stash(); });
+map.addCallback('zoomed', function() { stash(); });
 
 function killTimeout() {
     if (_clickTimeout) {
@@ -100,7 +101,7 @@ function onDown() {
 
 function onUp() {
     var evt = {};
-    var pos = new MM.Point(d3.event.clientX, d3.event.clientY);
+    var pos = new mm.point(d3.event.clientx, d3.event.clienty);
     _downLock = false;
 
     for (var key in d3.event) { evt[key] = d3.event[key]; }
@@ -408,8 +409,6 @@ function stashApply() {
         var decode = window.atob(session);
         geojson = JSON.parse(decode);
 
-         console.log(decode);
-         console.log(geojson);
         map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 
         // Render any known points and list items to the page.
@@ -448,10 +447,12 @@ function setCoordinates() {
     var pos = map.getCenter();
 
     geojson.location = {
-        lon: parseInt(pos.lon.toFixed(3), 10),
-        lat: parseInt(pos.lat.toFixed(3), 10),
-        zoom: parseInt(map.zoom().toFixed(), 10)
+        lon: pos.lon.toFixed(8),
+        lat: pos.lat.toFixed(8),
+        zoom: map.zoom().toFixed()
     };
+
+    window.location.hash = '';
 }
 
 d3.select('#permalink').on('click', function() {
