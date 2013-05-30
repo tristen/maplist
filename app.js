@@ -173,7 +173,9 @@ function renderMarkers(cb) {
 
         MM.addEvent(el, 'click', function() {
             var id = f.properties.id;
-            console.log(id);
+            document.location.href = '#' + id;
+
+            d3.select('#' + id).select('input').node().focus();
         });
 
         return el;
