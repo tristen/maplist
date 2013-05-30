@@ -531,6 +531,7 @@ input:-moz-placeholder           { color:#506879; }
       z-index:10;
       display:none;
       cursor:default;
+      padding:0 25px;
       }
       .maker .add.on .overlay {
         display:block;

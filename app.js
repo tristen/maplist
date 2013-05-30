@@ -128,7 +128,7 @@ function addMarker(pos) {
         var l = map.pointLocation(pos);
         id = 'id-' + Math.random().toString(36).substring(7);
 
-        geojson.features.push({
+        geojson.features.unshift({
             'geometry': {
                 'type': 'Point',
                 'coordinates': [l.lon, l.lat]
@@ -168,14 +168,19 @@ function renderMarkers(cb) {
     if (typeof marker === 'object') marker.destroy();
 
     // Create and add marker layer
-    marker = mapbox.markers.layer();
+    marker = mapbox.markers.layer().features(geojson.features).factory(function(f) {
+        var el = mapbox.markers.simplestyle_factory(f);
 
-    for (var i = 0; i < geojson.features.length; i++) {
-        marker.add_feature(geojson.features[i]);
-    }
+        MM.addEvent(el, 'click', function() {
+            var id = f.properties.id;
+            console.log(id);
+        });
 
-    mapbox.markers.interaction(marker);
+        return el;
+    });
+
     map.addLayer(marker);
+    mapbox.markers.interaction(marker);
     set = false;
 
     // Stash contents in session storage
@@ -203,7 +208,8 @@ function markerAdded() {
 
     d3.select('#markers')
         .insert('li', 'li:first-child')
-        .classed('clearfix pad2 ' + id, true)
+        .classed('clearfix pad2', true)
+        .attr('id', id)
         .html(templates.marker({
             hex: hex
         })).select('input').node().focus();
@@ -212,21 +218,21 @@ function markerAdded() {
 }
 
 function markerInteraction(id) {
-    d3.select('.' + id).select('.icon-rubbish')
+    d3.select('#' + id).select('.icon-rubbish')
         .attr('data-parent', id)
         .call(removeMarker);
 
-    d3.select('.' + id).select('.color-grid').call(function(el) {
+    d3.select('#' + id).select('.color-grid').call(function(el) {
         populateColors(el, id);
     });
 
-    d3.select('.' + id).select('input')
+    d3.select('#' + id).select('input')
         .attr('data-id', id)
         .call(function(el) {
             markerContentChange(el, 'title');
         });
 
-    d3.select('.' + id).select('textarea')
+    d3.select('#' + id).select('textarea')
         .on('change', resize)
         .on('cut', resize)
         .on('paste', resize)
@@ -303,7 +309,7 @@ function markerColor(el) {
             }
         });
 
-        d3.select('.' + markerId).select('.icon-marker')
+        d3.select('#' + markerId).select('.icon-marker')
             .style('color', color);
 
         renderMarkers(function() {
@@ -318,7 +324,7 @@ function removeMarker(el) {
     var marker = el.attr('data-parent');
 
     el.on('click', function() {
-        d3.select('.' + marker).remove();
+        d3.select('#' + marker).remove();
         // Iterate over the geojson object an remove
         // the marker entry with the associated id.
         geojson.features = _(geojson.features).filter(function(f) {
@@ -431,7 +437,8 @@ function renderKnown() {
 
         d3.select('#markers')
             .insert('li', '.markers')
-            .classed('clearfix pad2 ' + id, true)
+            .classed('clearfix pad2', true)
+            .attr('id', id)
             .html(templates.markerCached({
                 title: f.properties.title,
                 description: f.properties.description,
@@ -442,7 +449,7 @@ function renderKnown() {
         markerInteraction(id);
 
         // Resize textareas to account for saved content in them
-        d3.select('.' + id).select('textarea')
+        d3.select('#' + id).select('textarea')
             .style('height', function() {
                 return this.scrollHeight + 'px';
             });
