@@ -70,9 +70,9 @@ table { border-collapse: collapse; border-spacing:0; }
 
 @font-face {
   font-family:'Maplist';
-    src:url('fonts/maplist-6acb817f88555a182b753b101e1b9cbd.eot');
-    src:url('fonts/maplist-6acb817f88555a182b753b101e1b9cbd.eot?#iefix') format('embedded-opentype'),
-        url('fonts/maplist-6acb817f88555a182b753b101e1b9cbd.woff') format('woff');
+    src:url('fonts/maplist-47c4669c7b0af160df38ca9a1a30e499.eot');
+    src:url('fonts/maplist-47c4669c7b0af160df38ca9a1a30e499.eot?#iefix') format('embedded-opentype'),
+        url('fonts/maplist-47c4669c7b0af160df38ca9a1a30e499.woff') format('woff');
   font-weight:700;
   font-style:normal;
   }

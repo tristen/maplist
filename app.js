@@ -239,19 +239,10 @@ function markerInteraction(id) {
 }
 
 function markerContentChange(el, type) {
+    var id = el.attr('data-id');
+
     el
-        .on('keyup', function() {
-            var value = el.property('value');
-            var id = el.attr('data-id');
-            //var value = d3.select(this).property('value');
-            //var id = this.getAttribute('data-id');
-
-            _(geojson.features).each(function(f) {
-                if (f.properties.id && f.properties.id === id) {
-                   f.properties[type] = value;
-                }
-            });
-
+        .on('focus', function() {
             _(marker.markers()).each(function(m, i) {
                 if (m.data.properties && m.data.properties.id === id) {
 
@@ -261,6 +252,21 @@ function markerContentChange(el, type) {
                         lon: marker.markers()[i].location.lon
                     }).zoom(map.zoom()).optimal();
 
+                    marker.markers()[i].showTooltip();
+                }
+            });
+        })
+        .on('keyup', function() {
+            var value = el.property('value');
+
+            _(geojson.features).each(function(f) {
+                if (f.properties.id && f.properties.id === id) {
+                   f.properties[type] = value;
+                }
+            });
+
+            _(marker.markers()).each(function(m, i) {
+                if (m.data.properties && m.data.properties.id === id) {
                     marker.markers()[i].showTooltip();
                 }
             });
