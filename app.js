@@ -265,6 +265,8 @@ function markerContentChange(el, type) {
                     marker.markers()[i].showTooltip();
                 }
             });
+
+            document.location.hash = '';
         })
         .on('keyup', function() {
             var value = el.property('value');
