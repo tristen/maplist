@@ -137,7 +137,8 @@ function addMarker(pos) {
                 'id': id,
                 'marker-color': hex,
                 'title': 'Marker Name',
-                'description': 'Description'
+                'description': 'Description',
+                'marker-zoom': map.zoom()
             }
         });
 
@@ -253,12 +254,13 @@ function markerContentChange(el, type) {
         .on('focus', function() {
             _(marker.markers()).each(function(m, i) {
                 if (m.data.properties && m.data.properties.id === id) {
+                    var zoom = marker.markers()[i].data.properties['marker-zoom'] || map.zoom();
 
                     // Center the map to the point.
                     map.ease.location({
                         lat: marker.markers()[i].location.lat,
                         lon: marker.markers()[i].location.lon
-                    }).zoom(map.zoom()).optimal();
+                    }).zoom(zoom).optimal();
 
                     marker.markers()[i].showTooltip();
                 }
