@@ -6,6 +6,7 @@ var intent = require('hoverintent');
 var base64 = require('js-base64').Base64;
 var icons = require('./src/icons.js');
 var geojson = require('./src/markers.geojson');
+var gist = require('./src/gist.js');
 
 // Compile templates into an object
 var templates = {};

@@ -14,6 +14,7 @@ LIBS = \
 	src/mapbox.js
 
 APPLICATION = \
+	src/gist.js \
 	src/icons.js \
 	src/markers.geojson \
 	app.js
