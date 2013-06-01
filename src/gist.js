@@ -17,25 +17,27 @@ var gist = {
             var parsed = JSON.parse(res.response);
 
             for (var file in parsed.files) {
-                if (self._isJson(file)) return cb(parsed.files[file].content);
+                if (self._isJson(file)) return cb(err, parsed.files[file].content);
             }
         });
     },
 
     save: function(val, cb) {
         var request = d3.xhr('https://api.github.com/gists', 'application/json');
-        var geojson = Base64.encodeURI(JSON.stringify(val));
+        var geojson = JSON.stringify(val);
         var requestObject = JSON.stringify({
             description: 'A Gist from MapList',
             public: true,
             files: {
-                'list.json': {
+                'maplist.geojson': {
                     content: geojson
                 }
             }
         });
 
-        request.post(requestObject, cb(err, res));
+        request.post(requestObject, function(err, res) {
+            cb(err, JSON.parse(res.response));
+        });
     }
 };
 

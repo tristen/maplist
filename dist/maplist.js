@@ -55,19 +55,35 @@ var _clickTimeout = false;
 var m = document.getElementById('map');
 
 // If a hash exists and is an encoded string, parse it.
-if (window.location.hash &&
-    /^[A-Za-z0-9+\/]{8}/.test(window.location.hash.split('#').pop())) {
-    var encoded = window.location.hash.split('#').pop();
-    var decode = window.atob(encoded);
-    geojson = JSON.parse(decode);
+if (window.location.hash) {
+    // Additionaly test that this is a string of numbers:
+    // && /[0-9].test(window.location.hash) {
 
-    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+    d3.select('#save')
+        .classed('loading')
+        .html('Loading');
 
-    // Render any known points
-    // and list items to the map.
-    _.defer(function() {
-        renderKnown();
+    var id = window.location.hash.split('#').pop();
+
+    gist.get(id, function(err, res) {
+        if (err) {
+            d3.select('#save')
+                .classed('loading', null)
+                .html('Error')
+
+            console.error(err);
+        } else {
+            geojson = res;
+            map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+            d3.select('#save')
+                .classed('loading', null)
+                .html('Loaded');
+
+            // Render any known point and list items to the map.
+            renderKnown();
+        }
     });
+
 } else if (hasSession()) {
     // Check if a sessionStorage exists
     stashApply();
@@ -496,14 +512,39 @@ function setCoordinates() {
     };
 }
 
-d3.select('#permalink').on('click', function() {
+function dirty() {
+    d3.select('#save')
+        .classed('saved loading error', null)
+        .html('Save');
+}
+
+d3.select('#save').on('click', function() {
     d3.event.stopPropagation();
     d3.event.preventDefault();
 
+    // Update the location object with the current coordinates
     setCoordinates();
 
-    // Update the location object with the current coordinates
-    window.location.hash = Base64.encodeURI(JSON.stringify(geojson));
+    this.innerHTML = 'Saving';
+    var data = JSON.stringify(geojson);
+    gist.save(data, function(err, res) {
+
+        if (err) {
+            this.innerHTML = 'Error';
+            this.className = 'error';
+            console.error(err);
+        } else {
+            var link = window.location + '/#' + res.id;
+            this.innerHTML = 'Saved <input id="link" type="text" value="' + link + '"/>'
+            this.className = 'saved';
+
+            d3.select('#link').node()
+                .focus()
+                .on('focus', function() {
+                    this.select();
+                });
+        }
+    });
 });
 
 // Layer Switching
@@ -560,7 +601,7 @@ function getLocation() {
     });
 }
 
-},{"./src/icons.js":1,"./src/markers.geojson":2,"./src/gist.js":4,"underscore":5,"d3":6,"hoverintent":7,"js-base64":8}],5:[function(require,module,exports){
+},{"./src/icons.js":1,"./src/markers.geojson":2,"./src/gist.js":4,"underscore":5,"d3":6,"js-base64":7,"hoverintent":8}],5:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -1790,9 +1831,6 @@ function getLocation() {
 
 })()
 },{}],7:[function(require,module,exports){
-(function(){(function(global){var hoverintent=function(el,over,out){var x,y,pX,pY;var h={},state=0,timer=0;var options={sensitivity:7,interval:100,timeout:0};var defaults=function(opt){options=merge(opt||{},options)};var merge=function(obj){for(var i=1;i<arguments.length;i++){var def=arguments[i];for(var n in def){if(obj[n]===undefined)obj[n]=def[n]}}return obj};var addEvent=function(object,event,method){if(object.attachEvent){object["e"+event+method]=method;object[event+method]=function(){object["e"+event+method](window.event)};object.attachEvent("on"+event,object[event+method])}else{object.addEventListener(event,method,false)}};var removeEvent=function(object,event,method){if(object.detachEvent){object.detachEvent("on"+event,object[event+method]);object[event+method]=null}else{object.removeEventListener(event,method,false)}};var track=function(e){x=e.pageX;y=e.pageY};var delay=function(el,outEvent,e){if(timer)timer=clearTimeout(timer);state=0;return outEvent.call(el,e)};var dispatch=function(e,event,over){var el=e.currentTarget;if(timer)timer=clearTimeout(timer);if(over){pX=e.pageX;pY=e.pageY;addEvent(el,"mousemove",track(e));if(state!==1){timer=setTimeout(function(){compare(el,event,e)},options.interval)}}else{removeEvent(el,"mousemove",track(e));if(state===1){timer=setTimeout(function(){delay(el,event,e)},options.timeout)}}return this};var compare=function(el,overEvent,e){if(timer)timer=clearTimeout(timer);if(Math.abs(pX-x)+Math.abs(pY-y)<options.sensitivity){removeEvent(el,"mousemove",track);state=1;return overEvent.call(el,e)}else{pX=x;pY=y;timer=setTimeout(function(){compare(el,overEvent,e)},options.interval)}};h.options=function(opt){defaults(opt)};if(el){addEvent(el,"mouseover",function(e){dispatch(e,over,true)});addEvent(el,"mouseout",function(e){dispatch(e,out)})}defaults();return h};global.hoverintent=hoverintent;if(typeof module!=="undefined")module.exports=hoverintent})(this);
-})()
-},{}],8:[function(require,module,exports){
 (function(){/*
  * $Id: base64.js,v 2.12 2013/05/06 07:54:20 dankogai Exp dankogai $
  *
@@ -1969,7 +2007,10 @@ function getLocation() {
 })(this);
 
 })()
-},{"buffer":9}],6:[function(require,module,exports){
+},{"buffer":9}],8:[function(require,module,exports){
+(function(){(function(global){var hoverintent=function(el,over,out){var x,y,pX,pY;var h={},state=0,timer=0;var options={sensitivity:7,interval:100,timeout:0};var defaults=function(opt){options=merge(opt||{},options)};var merge=function(obj){for(var i=1;i<arguments.length;i++){var def=arguments[i];for(var n in def){if(obj[n]===undefined)obj[n]=def[n]}}return obj};var addEvent=function(object,event,method){if(object.attachEvent){object["e"+event+method]=method;object[event+method]=function(){object["e"+event+method](window.event)};object.attachEvent("on"+event,object[event+method])}else{object.addEventListener(event,method,false)}};var removeEvent=function(object,event,method){if(object.detachEvent){object.detachEvent("on"+event,object[event+method]);object[event+method]=null}else{object.removeEventListener(event,method,false)}};var track=function(e){x=e.pageX;y=e.pageY};var delay=function(el,outEvent,e){if(timer)timer=clearTimeout(timer);state=0;return outEvent.call(el,e)};var dispatch=function(e,event,over){var el=e.currentTarget;if(timer)timer=clearTimeout(timer);if(over){pX=e.pageX;pY=e.pageY;addEvent(el,"mousemove",track(e));if(state!==1){timer=setTimeout(function(){compare(el,event,e)},options.interval)}}else{removeEvent(el,"mousemove",track(e));if(state===1){timer=setTimeout(function(){delay(el,event,e)},options.timeout)}}return this};var compare=function(el,overEvent,e){if(timer)timer=clearTimeout(timer);if(Math.abs(pX-x)+Math.abs(pY-y)<options.sensitivity){removeEvent(el,"mousemove",track);state=1;return overEvent.call(el,e)}else{pX=x;pY=y;timer=setTimeout(function(){compare(el,overEvent,e)},options.interval)}};h.options=function(opt){defaults(opt)};if(el){addEvent(el,"mouseover",function(e){dispatch(e,over,true)});addEvent(el,"mouseout",function(e){dispatch(e,out)})}defaults();return h};global.hoverintent=hoverintent;if(typeof module!=="undefined")module.exports=hoverintent})(this);
+})()
+},{}],6:[function(require,module,exports){
 (function(){require("./d3");
 module.exports = d3;
 (function () { delete this.d3; })(); // unset global
@@ -10893,25 +10934,27 @@ var gist = {
             var parsed = JSON.parse(res.response);
 
             for (var file in parsed.files) {
-                if (self._isJson(file)) return cb(parsed.files[file].content);
+                if (self._isJson(file)) return cb(err, parsed.files[file].content);
             }
         });
     },
 
     save: function(val, cb) {
         var request = d3.xhr('https://api.github.com/gists', 'application/json');
-        var geojson = Base64.encodeURI(JSON.stringify(val));
+        var geojson = JSON.stringify(val);
         var requestObject = JSON.stringify({
             description: 'A Gist from MapList',
             public: true,
             files: {
-                'list.json': {
+                'maplist.geojson': {
                     content: geojson
                 }
             }
         });
 
-        request.post(requestObject, cb(err, res));
+        request.post(requestObject, function(err, res) {
+            cb(err, JSON.parse(res.response));
+        });
     }
 };
 

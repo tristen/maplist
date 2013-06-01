@@ -450,7 +450,7 @@ input:-moz-placeholder           { color:#506879; }
   }
   .controls .group {
     background:#fff;
-    margin-left:10px;
+    margin-left:5px;
     border:1px solid #9EA7AD;
     -webkit-box-shadow:0 0 4px rgba(0, 0, 0, 0.15);
             box-shadow:0 0 8px rgba(0, 0, 0, 0.15);
@@ -460,13 +460,18 @@ input:-moz-placeholder           { color:#506879; }
       }
       .controls .group li a {
         display:block;
-        width:38px;
-        height:38px;
-        line-height:38px;
+        width:36px;
+        height:36px;
+        line-height:36px;
         text-align:center;
         color:#ccc;
         border-left:1px solid #e0e0e0;
         }
+        .controls .group li a.save {
+          width:auto;
+          padding:0 20px;
+          font-weight:700;
+          }
         .controls .group li a:hover {
           color:#485964;
           }

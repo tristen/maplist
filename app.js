@@ -31,19 +31,35 @@ var _clickTimeout = false;
 var m = document.getElementById('map');
 
 // If a hash exists and is an encoded string, parse it.
-if (window.location.hash &&
-    /^[A-Za-z0-9+\/]{8}/.test(window.location.hash.split('#').pop())) {
-    var encoded = window.location.hash.split('#').pop();
-    var decode = window.atob(encoded);
-    geojson = JSON.parse(decode);
+if (window.location.hash) {
+    // Additionaly test that this is a string of numbers:
+    // && /[0-9].test(window.location.hash) {
 
-    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+    d3.select('#save')
+        .classed('loading')
+        .html('Loading');
 
-    // Render any known points
-    // and list items to the map.
-    _.defer(function() {
-        renderKnown();
+    var id = window.location.hash.split('#').pop();
+
+    gist.get(id, function(err, res) {
+        if (err) {
+            d3.select('#save')
+                .classed('loading', null)
+                .html('Error')
+
+            console.error(err);
+        } else {
+            geojson = res;
+            map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+            d3.select('#save')
+                .classed('loading', null)
+                .html('Loaded');
+
+            // Render any known point and list items to the map.
+            renderKnown();
+        }
     });
+
 } else if (hasSession()) {
     // Check if a sessionStorage exists
     stashApply();
@@ -472,14 +488,39 @@ function setCoordinates() {
     };
 }
 
-d3.select('#permalink').on('click', function() {
+function dirty() {
+    d3.select('#save')
+        .classed('saved loading error', null)
+        .html('Save');
+}
+
+d3.select('#save').on('click', function() {
     d3.event.stopPropagation();
     d3.event.preventDefault();
 
+    // Update the location object with the current coordinates
     setCoordinates();
 
-    // Update the location object with the current coordinates
-    window.location.hash = Base64.encodeURI(JSON.stringify(geojson));
+    this.innerHTML = 'Saving';
+    var data = JSON.stringify(geojson);
+    gist.save(data, function(err, res) {
+
+        if (err) {
+            this.innerHTML = 'Error';
+            this.className = 'error';
+            console.error(err);
+        } else {
+            var link = window.location + '/#' + res.id;
+            this.innerHTML = 'Saved <input id="link" type="text" value="' + link + '"/>'
+            this.className = 'saved';
+
+            d3.select('#link').node()
+                .focus()
+                .on('focus', function() {
+                    this.select();
+                });
+        }
+    });
 });
 
 // Layer Switching
