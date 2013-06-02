@@ -67,9 +67,6 @@ function initMap() {
     map.centerzoom({
         lat: geojson.location.lat,
         lon: geojson.location.lon }, geojson.location.zoom);
-
-    map.addCallback('panned', function() { stash(); });
-    map.addCallback('zoomed', function() { stash(); });
 }
 
 function killTimeout() {
@@ -348,6 +345,9 @@ function removeMarker(el) {
     var marker = el.attr('data-parent');
 
     el.on('click', function() {
+        d3.event.stopPropagation();
+        d3.event.preventDefault();
+
         d3.select('#' + marker).remove();
         // Iterate over the geojson object an remove
         // the marker entry with the associated id.
@@ -426,6 +426,8 @@ function stash() {
 
     state.innerHTML = 'Save';
     state.className = 'save';
+
+    d3.selectAll('.share-link').remove();
 
     // Remove a previous entry
     if (store.session) store.removeItem('session');
@@ -520,7 +522,10 @@ d3.select('#save').on('click', function() {
 
             d3.select('.state')
                 .append('li')
-                .html(shareLink);
+                .html(shareLink)
+                .node().setAttribute('class', 'share-link');
+
+            d3.select('#link').node().select();
 
             d3.select('#link')
                 .on('click', function() {
