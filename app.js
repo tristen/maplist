@@ -2,7 +2,6 @@
 // --------------------------------------
 var _ = require('underscore');
 var d3 = require('d3');
-var intent = require('hoverintent');
 var base64 = require('js-base64').Base64;
 var icons = require('./src/icons.js');
 var geojson = require('./src/markers.geojson');
@@ -21,41 +20,37 @@ var id;
 var map;
 var hex = '#5a8cd2';
 var marker;
-var fromHash;
+var m = document.getElementById('map');
+var state = document.getElementById('save');
 
 var _d; // Down Event
 var tol = 4; // Touch Tolerance
 var _downLock = false;
 var _clickTimeout = false;
 
-var m = document.getElementById('map');
-
 // If a hash exists and is an encoded string, parse it.
-if (window.location.hash) {
-    // Additionaly test that this is a string of numbers:
-    // && /[0-9].test(window.location.hash) {
-
-    d3.select('#save')
-        .classed('loading')
-        .html('Loading');
+if (window.location.hash &&
+    /^[0-9+\/]/.test(window.location.hash.split('#').pop())) {
 
     var id = window.location.hash.split('#').pop();
 
+    state.innerHTML = 'Loading';
+    state.className = 'loading off';
+
     gist.get(id, function(err, res) {
         if (err) {
-            d3.select('#save')
-                .classed('loading', null)
-                .html('Error')
-
+            state.innerHTML = 'Error';
+            state.className = 'error';
             console.error(err);
         } else {
             geojson = res;
             map = mapbox.map(m, mapbox.layer().id(geojson.layer));
-            d3.select('#save')
-                .classed('loading', null)
-                .html('Loaded');
+
+            state.innerHTML = 'Loaded';
+            state.className = 'loaded off';
 
             // Render any known point and list items to the map.
+            initMap();
             renderKnown();
         }
     });
@@ -65,14 +60,17 @@ if (window.location.hash) {
     stashApply();
 } else {
     map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+    initMap();
 }
 
-map.centerzoom({
-    lat: geojson.location.lat,
-    lon: geojson.location.lon }, geojson.location.zoom);
+function initMap() {
+    map.centerzoom({
+        lat: geojson.location.lat,
+        lon: geojson.location.lon }, geojson.location.zoom);
 
-map.addCallback('panned', function() { stash(); });
-map.addCallback('zoomed', function() { stash(); });
+    map.addCallback('panned', function() { stash(); });
+    map.addCallback('zoomed', function() { stash(); });
+}
 
 function killTimeout() {
     if (_clickTimeout) {
@@ -173,6 +171,9 @@ function addMarker(pos) {
                 }
             });
 
+            // Stash contents in session storage
+            stash();
+
             document.location.hash = '';
             markerAdded();
         });
@@ -202,9 +203,6 @@ function renderMarkers(cb) {
     map.addLayer(marker);
     mapbox.markers.interaction(marker);
     set = false;
-
-    // Stash contents in session storage
-    stash();
 
     if (cb) cb();
 }
@@ -277,7 +275,7 @@ function markerContentChange(el, type) {
                     map.ease.location({
                         lat: marker.markers()[i].location.lat,
                         lon: marker.markers()[i].location.lon
-                    }).zoom(zoom).optimal();
+                    }).zoom(zoom).optimal(1.5);
 
                     marker.markers()[i].showTooltip();
                 }
@@ -336,6 +334,9 @@ function markerColor(el) {
             .style('color', color);
 
         renderMarkers(function() {
+            // Stash contents in session storage
+            stash();
+
             document.location.hash = '';
         });
     });
@@ -355,6 +356,9 @@ function removeMarker(el) {
         });
 
         renderMarkers(function() {
+            // Stash contents in session storage
+            stash();
+
             document.location.hash = '';
         });
     });
@@ -420,6 +424,9 @@ function stash() {
     if (!window.sessionStorage) return false;
     var store = window.sessionStorage;
 
+    state.innerHTML = 'Save';
+    state.className = 'save';
+
     // Remove a previous entry
     if (store.session) store.removeItem('session');
 
@@ -445,6 +452,7 @@ function stashApply() {
         geojson = JSON.parse(decode);
 
         map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+        initMap();
 
         // Render any known points and list items to the page.
         _.defer(function() {
@@ -488,35 +496,34 @@ function setCoordinates() {
     };
 }
 
-function dirty() {
-    d3.select('#save')
-        .classed('saved loading error', null)
-        .html('Save');
-}
-
 d3.select('#save').on('click', function() {
+    var self = this;
     d3.event.stopPropagation();
     d3.event.preventDefault();
 
     // Update the location object with the current coordinates
     setCoordinates();
-
     this.innerHTML = 'Saving';
-    var data = JSON.stringify(geojson);
-    gist.save(data, function(err, res) {
+    this.className = 'off saving';
 
+    gist.save(geojson, function(err, res) {
         if (err) {
-            this.innerHTML = 'Error';
-            this.className = 'error';
+            self.innerHTML = 'Error';
+            self.className = 'error';
             console.error(err);
         } else {
-            var link = window.location + '/#' + res.id;
-            this.innerHTML = 'Saved <input id="link" type="text" value="' + link + '"/>'
-            this.className = 'saved';
+            var link = document.URL + '#' + res.id;
+            var shareLink = '<input id="link" type="text" value="' + link + '">';
 
-            d3.select('#link').node()
-                .focus()
-                .on('focus', function() {
+            self.innerHTML = 'Share link';
+            self.className = 'saved off';
+
+            d3.select('.state')
+                .append('li')
+                .html(shareLink);
+
+            d3.select('#link')
+                .on('click', function() {
                     this.select();
                 });
         }
@@ -571,7 +578,7 @@ function getLocation() {
             lat: pos.coords.latitude,
             lon: pos.coords.longitude,
             zoom: 18
-        }
+        };
 
         stash();
     });

@@ -92,12 +92,12 @@ textarea {
           box-sizing:border-box;
   }
 *::-webkit-scrollbar {
-  background:#e6e6e6;
+  background:#fff;
   width:15px;
   }
 *::-webkit-scrollbar-thumb {
-  background:#9ea7ad;
-  border:5px #e6e6e6 solid;
+  background:#ccc;
+  border:5px #fff solid;
   -webkit-border-radius:15px;
           border-radius:15px;
   }
@@ -261,6 +261,7 @@ input[type=text] {
   .introduction input[type=text] {
     font-weight:400;
     font-size:24px;
+    font-size:30px;
     }
 
 textarea,
@@ -442,6 +443,18 @@ input:-moz-placeholder           { color:#506879; }
   height:100%;
   top:0;bottom:0;left:0;right:0;
   }
+.map .findme {
+  background:#5a8cd2;
+  color:#fff;
+  position:absolute;
+  bottom:20px;
+  right:20px;
+  z-index:1000;
+  }
+  .map .findme:active {
+    -webkit-box-shadow:inset 0 8px 8px -8px rgba(0,0,0,0.25);
+            box-shadow:inset 0 8px 8px -8px rgba(0,0,0,0.25);
+    }
 .controls {
   position:absolute;
   top:20px;
@@ -459,19 +472,30 @@ input:-moz-placeholder           { color:#506879; }
       float:left;
       }
       .controls .group li a {
+        border-left:1px solid #e0e0e0;
+        color:#ccc;
+        }
+      .findme,
+      .controls .group li a {
         display:block;
         width:36px;
         height:36px;
         line-height:36px;
         text-align:center;
-        color:#ccc;
-        border-left:1px solid #e0e0e0;
         }
-        .controls .group li a.save {
+        .controls .group.state li a {
           width:auto;
           padding:0 20px;
           font-weight:700;
+          text-align:left;
           }
+          .controls .group.state input {
+            height:36px;
+            border-left:1px solid #e0e0e0;
+            padding:0 10px;
+            -webkit-border-radius:0;
+                    border-radius:0;
+            }
         .controls .group li a:hover {
           color:#485964;
           }
@@ -492,9 +516,18 @@ input:-moz-placeholder           { color:#506879; }
         .controls .group li a:active {
           background:#f8f8f8;
           color:#485964;
-          -webkit-box-shadow:inset 0 8px 8px -8px rgba(0,0,0,0.25);
-                  box-shadow:inset 0 8px 8px -8px rgba(0,0,0,0.25);
+          -webkit-box-shadow:inset 0 6px 6px -6px rgba(0,0,0,0.15);
+                  box-shadow:inset 0 6px 6px -6px rgba(0,0,0,0.15);
           }
+
+.controls .group li .save {
+  color:#485964;
+  }
+.controls .group li .off,
+.controls .group li .off:hover {
+  pointer-events:none;
+  color:#ccc;
+  }
 
 .maker-container {
   position:absolute;
@@ -508,6 +541,7 @@ input:-moz-placeholder           { color:#506879; }
     }
   .maker .add {
     position:relative;
+    z-index:10;
     display:block;
     color:#73b6e6;
     border-top:1px solid #3887be;
@@ -570,7 +604,7 @@ input:-moz-placeholder           { color:#506879; }
       }
 
 .marker {
-  margin-top:5px;
+  margin:5px 0;
   }
   .marker .icon {
     text-shadow:4px 4px 0 rgba(0,0,0,0.20);

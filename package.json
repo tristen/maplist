@@ -3,11 +3,9 @@
   "version": "0.0.1",
   "description": "Create sharable lists of things on a map",
   "dependencies": {
-    "js-base64": "~2.1.1",
+   "js-base64": "~2.1.1",
     "underscore": "~1.4.4",
-    "d3": "~3.1.7",
-    "hoverintent": "~0.2.0",
-    "marked": "~0.2.8"
+    "d3": "~3.1.7"
   },
   "devDependencies": {
     "uglify-js": "~2.2.5",
