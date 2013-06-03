@@ -530,7 +530,8 @@ d3.select('#save').on('click', function() {
             self.className = 'error';
             console.error(err);
         } else {
-            var link = document.URL + '#' + res.id;
+            var url = window.location.protocol + '//' + window.location.host + window.location.pathname;
+            var link = url + '#' + res.id;
             var shareLink = '<input id="link" type="text" value="' + link + '">';
 
             self.innerHTML = 'Share link';
