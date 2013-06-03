@@ -44,26 +44,60 @@ if (window.location.hash &&
             console.error(err);
         } else {
             geojson = res;
-            map = mapbox.map(m, mapbox.layer().id(geojson.layer));
-
             state.innerHTML = 'Loaded';
             state.className = 'loaded off';
 
-            // Render any known point and list items to the map.
-            initMap();
+            init();
             renderKnown();
         }
     });
 
-} else if (hasSession()) {
-    // Check if a sessionStorage exists
+} else if (hasSession()) { // Check if a sessionStorage exists
     stashApply();
 } else {
-    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
-    initMap();
+    init();
 }
 
-function initMap() {
+// Initialization
+// --------------------------------------
+function init() {
+    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+
+    d3.select('#markers')
+        .on('scroll', function() {
+            if (this.scrollTop > 0) {
+                d3.select('.add').classed('shadow', true);
+            } else {
+                d3.select('.add').classed('shadow', false);
+            }
+        });
+
+    d3.select('.maker')
+        .insert('div', '.add')
+        .classed('introduction pad2', true)
+        .html(templates.introduction({
+            title: geojson.title,
+            description: geojson.description
+        }));
+
+    d3.select('#title')
+        .call(function(el) {
+            updateIntroduction(el, 'title');
+        });
+
+    d3.select('#description')
+        .call(function(el) {
+            el.style('height', function() {
+                return this.scrollHeight + 'px';
+            });
+
+            updateIntroduction(el, 'description');
+        })
+        .on('cut', resize)
+        .on('paste', resize)
+        .on('drop', resize)
+        .on('keydown', resize);
+
     map.centerzoom({
         lat: geojson.location.lat,
         lon: geojson.location.lon }, geojson.location.zoom);
@@ -374,43 +408,6 @@ function resize() {
     });
 }
 
-// Initialization
-// --------------------------------------
-d3.select('#markers')
-    .on('scroll', function() {
-        if (this.scrollTop > 0) {
-            d3.select('.add').classed('shadow', true);
-        } else {
-            d3.select('.add').classed('shadow', false);
-        }
-    });
-
-d3.select('.maker')
-    .insert('div', '.add')
-    .classed('introduction pad2', true)
-    .html(templates.introduction({
-        title: geojson.title,
-        description: geojson.description
-    }));
-
-d3.select('#title')
-    .call(function(el) {
-        updateIntroduction(el, 'title');
-    });
-
-d3.select('#description')
-    .call(function(el) {
-        el.style('height', function() {
-            return this.scrollHeight + 'px';
-        });
-
-        updateIntroduction(el, 'description');
-    })
-    .on('cut', resize)
-    .on('paste', resize)
-    .on('drop', resize)
-    .on('keydown', resize);
-
 function updateIntroduction(el, type) {
     el
         .on('keyup', function() {
@@ -453,13 +450,8 @@ function stashApply() {
         var decode = window.atob(session);
         geojson = JSON.parse(decode);
 
-        map = mapbox.map(m, mapbox.layer().id(geojson.layer));
-        initMap();
-
-        // Render any known points and list items to the page.
-        _.defer(function() {
-            renderKnown();
-        });
+        init();
+        renderKnown();
     }
 }
 
