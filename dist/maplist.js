@@ -606,7 +606,7 @@ function getLocation() {
     });
 }
 
-},{"./src/icons.js":1,"./src/markers.geojson":2,"./src/gist.js":4,"underscore":5,"d3":6,"js-base64":7}],5:[function(require,module,exports){
+},{"./src/icons.js":1,"./src/markers.geojson":2,"./src/gist.js":4,"d3":5,"underscore":6,"js-base64":7}],6:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -2012,7 +2012,7 @@ function getLocation() {
 })(this);
 
 })()
-},{"buffer":8}],6:[function(require,module,exports){
+},{"buffer":8}],5:[function(require,module,exports){
 (function(){require("./d3");
 module.exports = d3;
 (function () { delete this.d3; })(); // unset global
@@ -10970,7 +10970,7 @@ var gist = {
 
 module.exports = gist;
 
-},{"d3":6}],11:[function(require,module,exports){
+},{"d3":5}],11:[function(require,module,exports){
 var events = require('events');
 
 exports.isArray = isArray;
