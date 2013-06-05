@@ -6,6 +6,8 @@ var base64 = require('js-base64').Base64;
 var icons = require('./src/icons.js');
 var geojson = require('./src/markers.geojson');
 var gist = require('./src/gist.js');
+var cookie = require('./src/cookie.js');
+var oauth = require('./oauth.json');
 
 // Compile templates into an object
 var templates = {};
@@ -27,6 +29,19 @@ var _d; // Down Event
 var tol = 4; // Touch Tolerance
 var _downLock = false;
 var _clickTimeout = false;
+var authenticated;
+
+
+// Check if user is authenticated on GitHub
+if (authenticate()) {
+    authenticated = true;
+} else {
+    d3.select('#state')
+        .append('li')
+        .html(templates.login({
+            client: oauth.clientId
+        }));
+}
 
 // If a hash exists and is an encoded string, parse it.
 if (window.location.hash &&
@@ -51,11 +66,32 @@ if (window.location.hash &&
             renderKnown();
         }
     });
-
 } else if (hasSession()) { // Check if a sessionStorage exists
     stashApply();
 } else {
     init();
+}
+
+function authenticate() {
+    if (cookie.get('maplist-token')) return window.authenticated = true;
+    var match = window.location.href.match(/\?code=([a-z0-9]*)/);
+
+    // Handle Code
+    if (match) {
+      d3.json(oauth.url + '/authenticate/' + match[1], function(err, data) {
+        if (err) console.error(err);
+
+        cookie.set('maplist-token', data.token);
+        authenticated = true;
+
+        // Adjust URL
+        var regex = new RegExp('\\?code=' + match[1]);
+        window.location.href = window.location.href.replace(regex, '').replace('&state=', '');
+      });
+      return true;
+    } else {
+      return false;
+    }
 }
 
 // Initialization
@@ -514,7 +550,7 @@ d3.select('#save').on('click', function() {
             self.className = 'saved off';
 
             d3.select('.state')
-                .append('li')
+                .insert('li', 'li:last-child')
                 .html(shareLink)
                 .node().setAttribute('class', 'share-link');
 
