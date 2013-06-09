@@ -524,6 +524,7 @@ input:-moz-placeholder           { color:#506879; }
           }
 
 .controls .group li .login,
+.controls .group li .logout,
 .controls .group li .save {
   color:#485964;
   }

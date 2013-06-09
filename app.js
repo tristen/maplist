@@ -34,7 +34,29 @@ var authenticated;
 
 // Check if user is authenticated on GitHub
 if (authenticate()) {
-    authenticated = true;
+    var request = d3.xhr(oauth.api + '/user', 'application/x-www-form-urlencoded');
+    request.header('Authorization', 'token ' + cookie.get('maplist-token'));
+
+    request.get(function(err, res) {
+        var res = JSON.parse(res.response);
+        if (err) return console.error(err);
+        cookie.set('maplist-username', res.login);
+
+        d3.select('#state')
+            .append('li')
+            .html(templates.logout({
+                username: cookie.get('maplist-username')
+            }));
+
+        // Manage Logout
+        d3.select('.logout').on('click', function() {
+            d3.event.stopPropagation();
+            d3.event.preventDefault();
+
+            cookie.unset('maplist-token');
+            window.location.reload();
+        });
+    });
 } else {
     d3.select('#state')
         .append('li')
@@ -73,24 +95,25 @@ if (window.location.hash &&
 }
 
 function authenticate() {
-    if (cookie.get('maplist-token')) return window.authenticated = true;
+    if (cookie.get('maplist-token')) return true;
     var match = window.location.href.match(/\?code=([a-z0-9]*)/);
 
     // Handle Code
     if (match) {
-      d3.json(oauth.url + '/authenticate/' + match[1], function(err, data) {
-        if (err) console.error(err);
+        d3.json(oauth.gatekeeperUrl + '/authenticate/' + match[1], function(err, res) {
+            if (err) return console.error(err);
 
-        cookie.set('maplist-token', data.token);
-        authenticated = true;
+            cookie.set('maplist-token', res.token);
+            authenticated = true;
 
-        // Adjust URL
-        var regex = new RegExp('\\?code=' + match[1]);
-        window.location.href = window.location.href.replace(regex, '').replace('&state=', '');
+            // Adjust URL
+            var regex = new RegExp('\\?code=' + match[1]);
+            window.location.href = window.location.href.replace(regex, '');
+
+        return true;
       });
-      return true;
     } else {
-      return false;
+        return false;
     }
 }
 

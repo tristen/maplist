@@ -81,6 +81,10 @@
     <a class='login' href='https://github.com/login/oauth/authorize?client_id=<%= client %>&scope=gist'>Login with GitHub</a>
   </script>
 
+  <script data-template='logout' type='text/html'>
+    <a class='logout' href='#'>Logout <%= username %></a>
+  </script>
+
   <script data-template='colors' type='text/html'>
     <a href='#' class='swatch' title='<%= hex %>' data-marker='<%= markerId %>' style='background-color:<%= hex %>'></a>
   </script>
