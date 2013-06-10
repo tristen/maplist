@@ -22,6 +22,20 @@ module.exports =  {
 }
 
 },{}],3:[function(require,module,exports){
+var url = function(hash, cb) {
+    var gist = /^[0-9+\/]/;
+    var parts = hash.split('/');
+
+    // :gist
+    if (gist.test(parts[0])) return cb('anonymous', parts);
+
+    // :user/:gist
+    if (parts.length === 2 && gist.test(parts[1])) return cb('user', parts);
+};
+
+module.exports = url;
+
+},{}],4:[function(require,module,exports){
 function tryParse(obj) {
   try {
     return JSON.parse(obj);
@@ -93,14 +107,14 @@ cookie.clear = function() {
 
 module.exports = cookie;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 module.exports={
   "api": "https://api.github.com",
   "clientId": "601048e95dbf8e7ab83f",
   "gatekeeperUrl": "http://maplist.herokuapp.com"
 }
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 // Initialization
 // --------------------------------------
 var _ = require('underscore');
@@ -108,6 +122,7 @@ var d3 = require('d3');
 var base64 = require('js-base64').Base64;
 var icons = require('./src/icons.js');
 var geojson = require('./src/markers.geojson');
+var url = require('./src/url.js');
 var gist = require('./src/gist.js');
 var cookie = require('./src/cookie.js');
 var oauth = require('./oauth.json');
@@ -133,15 +148,43 @@ var tol = 4; // Touch Tolerance
 var _downLock = false;
 var _clickTimeout = false;
 var authenticated;
+var user;
+var gistId;
 
+if (window.location.hash) {
+    state.innerHTML = 'Loading';
+    state.className = 'loading off';
+
+    // Returns the type of path we are working with.
+    url(window.location.hash.slice(1), function(type, parts) {
+        if (type === 'user') user = parts[0];
+        gistId = (type === 'user') ? parts[1] : parts[0];
+
+        gist.get(type, parts, function(err, res) {
+            if (err) {
+                state.innerHTML = 'Failed to load gist';
+                state.className = 'error';
+                console.error(err);
+                init();
+            } else {
+                geojson = res;
+                state.innerHTML = 'Loaded';
+                state.className = 'loaded off';
+
+                init();
+                renderKnown();
+            }
+        });
+    });
+} else if (hasSession()) { // Check if a sessionStorage exists
+    stashApply();
+} else {
+    init();
+}
 
 // Check if user is authenticated on GitHub
 if (authenticate()) {
-    var request = d3.xhr(oauth.api + '/user', 'application/x-www-form-urlencoded');
-    request.header('Authorization', 'token ' + cookie.get('maplist-token'));
-
-    request.get(function(err, res) {
-        var res = JSON.parse(res.response);
+    gist.authenticate(function(err, res) {
         if (err) return console.error(err);
         cookie.set('maplist-username', res.login);
 
@@ -156,6 +199,7 @@ if (authenticate()) {
             d3.event.stopPropagation();
             d3.event.preventDefault();
 
+            cookie.unset('maplist-username');
             cookie.unset('maplist-token');
             window.location.reload();
         });
@@ -166,35 +210,6 @@ if (authenticate()) {
         .html(templates.login({
             client: oauth.clientId
         }));
-}
-
-// If a hash exists and is an encoded string, parse it.
-if (window.location.hash &&
-    /^[0-9+\/]/.test(window.location.hash.split('#').pop())) {
-
-    var id = window.location.hash.split('#').pop();
-
-    state.innerHTML = 'Loading';
-    state.className = 'loading off';
-
-    gist.get(id, function(err, res) {
-        if (err) {
-            state.innerHTML = 'Error';
-            state.className = 'error';
-            console.error(err);
-        } else {
-            geojson = res;
-            state.innerHTML = 'Loaded';
-            state.className = 'loaded off';
-
-            init();
-            renderKnown();
-        }
-    });
-} else if (hasSession()) { // Check if a sessionStorage exists
-    stashApply();
-} else {
-    init();
 }
 
 function authenticate() {
@@ -366,8 +381,6 @@ function addMarker(pos) {
 
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
             markerAdded();
         });
     }
@@ -473,8 +486,6 @@ function markerContentChange(el, type) {
                     marker.markers()[i].showTooltip();
                 }
             });
-
-            document.location.hash = '';
         })
         .on('keyup', function() {
             var value = el.property('value');
@@ -529,8 +540,6 @@ function markerColor(el) {
         renderMarkers(function() {
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
         });
     });
 }
@@ -554,8 +563,6 @@ function removeMarker(el) {
         renderMarkers(function() {
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
         });
     });
 }
@@ -662,16 +669,22 @@ d3.select('#save').on('click', function() {
     this.innerHTML = 'Saving';
     this.className = 'off saving';
 
-    gist.save(geojson, function(err, res) {
+    gist.save(geojson, {user: user, gist: gistId}, function(err, res) {
         if (err) {
             self.innerHTML = 'Error';
             self.className = 'error';
             console.error(err);
         } else {
+            var link = res.id;
             var url = window.location.protocol + '//' + window.location.host + window.location.pathname;
-            var link = url + '#' + res.id;
-            var shareLink = '<input id="link" type="text" value="' + link + '">';
 
+            // If this a registered user saved this list:
+            if (res.user) link = res.user.login + '/' + res.id;
+
+            var shareLink = '<input id="link" type="text" value="' +
+                url + '#' + link + '">';
+
+            window.location.hash = link;
             self.innerHTML = 'Share link';
             self.className = 'saved off';
 
@@ -744,7 +757,7 @@ function getLocation() {
     });
 }
 
-},{"./src/icons.js":1,"./src/markers.geojson":2,"./src/gist.js":6,"./src/cookie.js":3,"./oauth.json":4,"underscore":7,"d3":8,"js-base64":9}],7:[function(require,module,exports){
+},{"./src/icons.js":1,"./src/markers.geojson":2,"./src/url.js":3,"./src/gist.js":7,"./src/cookie.js":4,"./oauth.json":5,"underscore":8,"d3":9,"js-base64":10}],8:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -1973,7 +1986,7 @@ function getLocation() {
 }).call(this);
 
 })()
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 (function(){/*
  * $Id: base64.js,v 2.12 2013/05/06 07:54:20 dankogai Exp dankogai $
  *
@@ -2150,13 +2163,13 @@ function getLocation() {
 })(this);
 
 })()
-},{"buffer":10}],8:[function(require,module,exports){
+},{"buffer":11}],9:[function(require,module,exports){
 (function(){require("./d3");
 module.exports = d3;
 (function () { delete this.d3; })(); // unset global
 
 })()
-},{"./d3":11}],12:[function(require,module,exports){
+},{"./d3":12}],13:[function(require,module,exports){
 (function(){// UTILITY
 var util = require('util');
 var Buffer = require("buffer").Buffer;
@@ -2473,7 +2486,7 @@ assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
 assert.ifError = function(err) { if (err) {throw err;}};
 
 })()
-},{"util":13,"buffer":10}],11:[function(require,module,exports){
+},{"util":14,"buffer":11}],12:[function(require,module,exports){
 d3 = function() {
   var d3 = {
     version: "3.1.10"
@@ -11059,8 +11072,10 @@ d3 = function() {
   });
   return d3;
 }();
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 var d3 = require('d3');
+var cookie = require('./cookie.js');
+var oauth = require('.././oauth.json');
 
 var gist = {
     _isJson: function(ex) {
@@ -11070,11 +11085,30 @@ var gist = {
         return true;
     },
 
-    api: 'https://api.github.com/gists',
+    authenticate: function(cb) {
+        var request = d3.xhr(oauth.api + '/user', 'application/x-www-form-urlencoded');
+        request.header('Authorization', 'token ' + cookie.get('maplist-token'));
 
-    get: function(id, cb) {
+        request.get(function(err, res) {
+            if (err) return cb(err);
+            return cb(null, JSON.parse(res.response));
+        });
+    },
+
+    authorization: function(request) {
+        var user = cookie.get('maplist-username');
+        var token = cookie.get('maplist-token');
+        if (user && token) request.header('Authorization', 'token ' + token);
+        return request;
+    },
+
+    get: function(type, parts, cb) {
         var self = this;
-        var request = d3.xhr(this.api + '/' + id, 'application/json');
+        var request = d3.xhr(oauth.api + '/gists/' + parts[0], 'application/json');
+
+        if (type === 'user') {
+            request = d3.xhr(oauth.api + '/gists/' + parts[1], 'application/json');
+        }
 
         request.get(function(err, res) {
             if (err) return cb(err);
@@ -11086,29 +11120,59 @@ var gist = {
         });
     },
 
-    save: function(val, cb) {
-        var request = d3.xhr(this.api, 'application/json');
-        var geojson = JSON.stringify(val);
+    save: function(val, options, cb) {
+        var self = this;
+        var request;
+        var geojson = JSON.stringify(val, null, 4);
 
-        var requestObject = JSON.stringify({
-            'description': 'A Gist from MapList',
-            'public': true,
-            'files': {
-                'maplist.json': {
-                    'content': geojson
+        function createGist() {
+            request = d3.xhr(oauth.api + '/gists', 'application/json');
+            self.authorization(request);
+
+            // Create a new Gist, anonymous or not.
+            var requestObject = JSON.stringify({
+                'description': 'A Gist from MapList',
+                'public': true,
+                'files': {
+                    'maplist.json': {
+                        'content': geojson
+                    }
                 }
-            }
-        });
+            });
 
-        request.post(requestObject, function(err, res) {
-            cb(err, JSON.parse(res.response));
-        });
+            request.post(requestObject, function(err, res) {
+                if (err) return cb(err);
+                return cb(null, JSON.parse(res.response));
+            });
+        }
+
+        if (options.user === cookie.get('maplist-username')) {
+            request = d3.xhr(oauth.api + '/gists/' + options.gist, 'application/json');
+            this.authorization(request);
+
+            // Update a users gist
+            var requestObject = JSON.stringify({
+                'files': {
+                    'maplist.json': {
+                        'content': geojson
+                    }
+                }
+            });
+
+            request.send('PATCH', requestObject, function(err, res) {
+                if (err) return createGist();
+                return cb(null, JSON.parse(res.response));
+            });
+
+        } else {
+            createGist();
+        }
     }
 };
 
 module.exports = gist;
 
-},{"d3":8}],13:[function(require,module,exports){
+},{"./cookie.js":4,".././oauth.json":5,"d3":9}],14:[function(require,module,exports){
 var events = require('events');
 
 exports.isArray = isArray;
@@ -11461,7 +11525,7 @@ exports.format = function(f) {
   return str;
 };
 
-},{"events":14}],15:[function(require,module,exports){
+},{"events":15}],16:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -11547,7 +11611,7 @@ exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 (function(){function SlowBuffer (size) {
     this.length = size;
 };
@@ -12867,7 +12931,7 @@ SlowBuffer.prototype.writeDoubleLE = Buffer.prototype.writeDoubleLE;
 SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 
 })()
-},{"assert":12,"./buffer_ieee754":15,"base64-js":16}],17:[function(require,module,exports){
+},{"assert":13,"./buffer_ieee754":16,"base64-js":17}],18:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -12921,7 +12985,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 (function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
@@ -13107,7 +13171,7 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":17}],16:[function(require,module,exports){
+},{"__browserify_process":18}],17:[function(require,module,exports){
 (function (exports) {
 	'use strict';
 
@@ -13193,5 +13257,5 @@ EventEmitter.prototype.listeners = function(type) {
 	module.exports.fromByteArray = uint8ToBase64;
 }());
 
-},{}]},{},[5])
+},{}]},{},[6])
 ;

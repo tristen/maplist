@@ -5,6 +5,7 @@ var d3 = require('d3');
 var base64 = require('js-base64').Base64;
 var icons = require('./src/icons.js');
 var geojson = require('./src/markers.geojson');
+var url = require('./src/url.js');
 var gist = require('./src/gist.js');
 var cookie = require('./src/cookie.js');
 var oauth = require('./oauth.json');
@@ -30,15 +31,43 @@ var tol = 4; // Touch Tolerance
 var _downLock = false;
 var _clickTimeout = false;
 var authenticated;
+var user;
+var gistId;
 
+if (window.location.hash) {
+    state.innerHTML = 'Loading';
+    state.className = 'loading off';
+
+    // Returns the type of path we are working with.
+    url(window.location.hash.slice(1), function(type, parts) {
+        if (type === 'user') user = parts[0];
+        gistId = (type === 'user') ? parts[1] : parts[0];
+
+        gist.get(type, parts, function(err, res) {
+            if (err) {
+                state.innerHTML = 'Failed to load gist';
+                state.className = 'error';
+                console.error(err);
+                init();
+            } else {
+                geojson = res;
+                state.innerHTML = 'Loaded';
+                state.className = 'loaded off';
+
+                init();
+                renderKnown();
+            }
+        });
+    });
+} else if (hasSession()) { // Check if a sessionStorage exists
+    stashApply();
+} else {
+    init();
+}
 
 // Check if user is authenticated on GitHub
 if (authenticate()) {
-    var request = d3.xhr(oauth.api + '/user', 'application/x-www-form-urlencoded');
-    request.header('Authorization', 'token ' + cookie.get('maplist-token'));
-
-    request.get(function(err, res) {
-        var res = JSON.parse(res.response);
+    gist.authenticate(function(err, res) {
         if (err) return console.error(err);
         cookie.set('maplist-username', res.login);
 
@@ -53,6 +82,7 @@ if (authenticate()) {
             d3.event.stopPropagation();
             d3.event.preventDefault();
 
+            cookie.unset('maplist-username');
             cookie.unset('maplist-token');
             window.location.reload();
         });
@@ -63,35 +93,6 @@ if (authenticate()) {
         .html(templates.login({
             client: oauth.clientId
         }));
-}
-
-// If a hash exists and is an encoded string, parse it.
-if (window.location.hash &&
-    /^[0-9+\/]/.test(window.location.hash.split('#').pop())) {
-
-    var id = window.location.hash.split('#').pop();
-
-    state.innerHTML = 'Loading';
-    state.className = 'loading off';
-
-    gist.get(id, function(err, res) {
-        if (err) {
-            state.innerHTML = 'Error';
-            state.className = 'error';
-            console.error(err);
-        } else {
-            geojson = res;
-            state.innerHTML = 'Loaded';
-            state.className = 'loaded off';
-
-            init();
-            renderKnown();
-        }
-    });
-} else if (hasSession()) { // Check if a sessionStorage exists
-    stashApply();
-} else {
-    init();
 }
 
 function authenticate() {
@@ -263,8 +264,6 @@ function addMarker(pos) {
 
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
             markerAdded();
         });
     }
@@ -370,8 +369,6 @@ function markerContentChange(el, type) {
                     marker.markers()[i].showTooltip();
                 }
             });
-
-            document.location.hash = '';
         })
         .on('keyup', function() {
             var value = el.property('value');
@@ -426,8 +423,6 @@ function markerColor(el) {
         renderMarkers(function() {
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
         });
     });
 }
@@ -451,8 +446,6 @@ function removeMarker(el) {
         renderMarkers(function() {
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
         });
     });
 }
@@ -559,16 +552,22 @@ d3.select('#save').on('click', function() {
     this.innerHTML = 'Saving';
     this.className = 'off saving';
 
-    gist.save(geojson, function(err, res) {
+    gist.save(geojson, {user: user, gist: gistId}, function(err, res) {
         if (err) {
             self.innerHTML = 'Error';
             self.className = 'error';
             console.error(err);
         } else {
+            var link = res.id;
             var url = window.location.protocol + '//' + window.location.host + window.location.pathname;
-            var link = url + '#' + res.id;
-            var shareLink = '<input id="link" type="text" value="' + link + '">';
 
+            // If this a registered user saved this list:
+            if (res.user) link = res.user.login + '/' + res.id;
+
+            var shareLink = '<input id="link" type="text" value="' +
+                url + '#' + link + '">';
+
+            window.location.hash = link;
             self.innerHTML = 'Share link';
             self.className = 'saved off';
 
