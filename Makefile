@@ -14,8 +14,11 @@ LIBS = \
 	src/mapbox.js
 
 APPLICATION = \
+	oauth.json \
+	src/url.js \
 	src/gist.js \
 	src/icons.js \
+	src/cookie.js \
 	src/markers.geojson \
 	app.js
 

@@ -10,7 +10,7 @@
 <body>
   <div id='map' class='map'>
     <div id='controls' class='controls'>
-      <ul class='group round state clearfix'>
+      <ul id='state' class='group round state clearfix'>
         <li><a id='save' class='save' href='#'>Save</a></li>
       </ul>
       <ul class='group layers round clearfix'>
@@ -75,6 +75,14 @@
 
   <script data-template='option' type='text/html'>
     <option value='<%= value %>'><%= name %></option>
+  </script>
+
+  <script data-template='login' type='text/html'>
+    <a class='login' href='https://github.com/login/oauth/authorize?client_id=<%= client %>&scope=gist'>Login with GitHub</a>
+  </script>
+
+  <script data-template='logout' type='text/html'>
+    <a class='logout' href='#'>Logout <%= username %></a>
   </script>
 
   <script data-template='colors' type='text/html'>
