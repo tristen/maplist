@@ -22,6 +22,99 @@ module.exports =  {
 }
 
 },{}],3:[function(require,module,exports){
+var url = function(hash, cb) {
+    var gist = /^[0-9+\/]/;
+    var parts = hash.split('/');
+
+    // :gist
+    if (gist.test(parts[0])) return cb('anonymous', parts);
+
+    // :user/:gist
+    if (parts.length === 2 && gist.test(parts[1])) return cb('user', parts);
+};
+
+module.exports = url;
+
+},{}],4:[function(require,module,exports){
+function tryParse(obj) {
+  try {
+    return JSON.parse(obj);
+  } catch(e) {}
+
+  return obj;
+}
+
+function tryStringify(obj) {
+  if (typeof obj !== 'object' || !JSON.stringify) return obj;
+  return JSON.stringify(obj);
+}
+
+var cookie = {};
+
+cookie.set = function(name, value, expires, path, domain) {
+  var pair = escape(name) + '=' + escape(tryStringify(value));
+
+  if (!!expires) {
+    if (expires.constructor === Number) pair += ';max-age=' + expires;
+    else if (expires.constructor === String) pair += ';expires=' + expires;
+    else if (expires.constructor === Date)  pair += ';expires=' + expires.toUTCString();
+  }
+
+  pair += ';path=' + ((!!path) ? path : '/');
+  if(!!domain) pair += ';domain=' + domain;
+
+  document.cookie = pair;
+  return cookie;
+};
+
+cookie.setObject = function(object, expire, path, domain) {
+  for(var key in object) cookie.set(key, object[key], expires, path, domain);
+  return cookie;
+};
+
+cookie.get = function(name) {
+  var obj = cookie.getObject();
+  return obj[name];
+};
+
+cookie.getObject = function() {
+  var pairs = document.cookie.split(/;\s?/i);
+  var object = {};
+  var pair;
+
+  for (var i in pairs) {
+    if (typeof pairs[i] === 'string') {
+      pair = pairs[i].split('=');
+      if (pair.length <= 1) continue;
+      object[unescape(pair[0])] = tryParse(unescape(pair[1]));
+    }
+  }
+
+  return object;
+};
+
+cookie.unset = function(name) {
+  var date = new Date(0);
+  document.cookie = name + '=; expires=' + date.toUTCString();
+  return cookie;
+};
+
+cookie.clear = function() {
+  var obj = cookie.getObject();
+  for(var key in obj) cookie.unset(key);
+  return object;
+};
+
+module.exports = cookie;
+
+},{}],5:[function(require,module,exports){
+module.exports={
+  "api": "https://api.github.com",
+  "clientId": "601048e95dbf8e7ab83f",
+  "gatekeeperUrl": "http://maplist.herokuapp.com"
+}
+
+},{}],6:[function(require,module,exports){
 // Initialization
 // --------------------------------------
 var _ = require('underscore');
@@ -29,7 +122,10 @@ var d3 = require('d3');
 var base64 = require('js-base64').Base64;
 var icons = require('./src/icons.js');
 var geojson = require('./src/markers.geojson');
+var url = require('./src/url.js');
 var gist = require('./src/gist.js');
+var cookie = require('./src/cookie.js');
+var oauth = require('./oauth.json');
 
 // Compile templates into an object
 var templates = {};
@@ -51,35 +147,92 @@ var _d; // Down Event
 var tol = 4; // Touch Tolerance
 var _downLock = false;
 var _clickTimeout = false;
+var authenticated;
+var user;
+var gistId;
 
-// If a hash exists and is an encoded string, parse it.
-if (window.location.hash &&
-    /^[0-9+\/]/.test(window.location.hash.split('#').pop())) {
-
-    var id = window.location.hash.split('#').pop();
-
+if (window.location.hash) {
     state.innerHTML = 'Loading';
     state.className = 'loading off';
 
-    gist.get(id, function(err, res) {
-        if (err) {
-            state.innerHTML = 'Error';
-            state.className = 'error';
-            console.error(err);
-        } else {
-            geojson = res;
-            state.innerHTML = 'Loaded';
-            state.className = 'loaded off';
+    // Returns the type of path we are working with.
+    url(window.location.hash.slice(1), function(type, parts) {
+        if (type === 'user') user = parts[0];
+        gistId = (type === 'user') ? parts[1] : parts[0];
 
-            init();
-            renderKnown();
-        }
+        gist.get(type, parts, function(err, res) {
+            if (err) {
+                state.innerHTML = 'Failed to load gist';
+                state.className = 'error';
+                console.error(err);
+                init();
+            } else {
+                geojson = res;
+                state.innerHTML = 'Loaded';
+                state.className = 'loaded off';
+
+                init();
+                renderKnown();
+            }
+        });
     });
-
 } else if (hasSession()) { // Check if a sessionStorage exists
     stashApply();
 } else {
     init();
+}
+
+// Check if user is authenticated on GitHub
+if (authenticate()) {
+    gist.authenticate(function(err, res) {
+        if (err) return console.error(err);
+        cookie.set('maplist-username', res.login);
+
+        d3.select('#state')
+            .append('li')
+            .html(templates.logout({
+                username: cookie.get('maplist-username')
+            }));
+
+        // Manage Logout
+        d3.select('.logout').on('click', function() {
+            d3.event.stopPropagation();
+            d3.event.preventDefault();
+
+            cookie.unset('maplist-username');
+            cookie.unset('maplist-token');
+            window.location.reload();
+        });
+    });
+} else {
+    d3.select('#state')
+        .append('li')
+        .html(templates.login({
+            client: oauth.clientId
+        }));
+}
+
+function authenticate() {
+    if (cookie.get('maplist-token')) return true;
+    var match = window.location.href.match(/\?code=([a-z0-9]*)/);
+
+    // Handle Code
+    if (match) {
+        d3.json(oauth.gatekeeperUrl + '/authenticate/' + match[1], function(err, res) {
+            if (err) return console.error(err);
+
+            cookie.set('maplist-token', res.token);
+            authenticated = true;
+
+            // Adjust URL
+            var regex = new RegExp('\\?code=' + match[1]);
+            window.location.href = window.location.href.replace(regex, '');
+
+        return true;
+      });
+    } else {
+        return false;
+    }
 }
 
 // Initialization
@@ -228,8 +381,6 @@ function addMarker(pos) {
 
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
             markerAdded();
         });
     }
@@ -335,8 +486,6 @@ function markerContentChange(el, type) {
                     marker.markers()[i].showTooltip();
                 }
             });
-
-            document.location.hash = '';
         })
         .on('keyup', function() {
             var value = el.property('value');
@@ -391,8 +540,6 @@ function markerColor(el) {
         renderMarkers(function() {
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
         });
     });
 }
@@ -416,8 +563,6 @@ function removeMarker(el) {
         renderMarkers(function() {
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
         });
     });
 }
@@ -524,21 +669,27 @@ d3.select('#save').on('click', function() {
     this.innerHTML = 'Saving';
     this.className = 'off saving';
 
-    gist.save(geojson, function(err, res) {
+    gist.save(geojson, {user: user, gist: gistId}, function(err, res) {
         if (err) {
             self.innerHTML = 'Error';
             self.className = 'error';
             console.error(err);
         } else {
+            var link = res.id;
             var url = window.location.protocol + '//' + window.location.host + window.location.pathname;
-            var link = url + '#' + res.id;
-            var shareLink = '<input id="link" type="text" value="' + link + '">';
 
+            // If this a registered user saved this list:
+            if (res.user) link = res.user.login + '/' + res.id;
+
+            var shareLink = '<input id="link" type="text" value="' +
+                url + '#' + link + '">';
+
+            window.location.hash = link;
             self.innerHTML = 'Share link';
             self.className = 'saved off';
 
             d3.select('.state')
-                .append('li')
+                .insert('li', 'li:last-child')
                 .html(shareLink)
                 .node().setAttribute('class', 'share-link');
 
@@ -606,7 +757,7 @@ function getLocation() {
     });
 }
 
-},{"./src/icons.js":1,"./src/markers.geojson":2,"./src/gist.js":4,"d3":5,"underscore":6,"js-base64":7}],6:[function(require,module,exports){
+},{"./src/icons.js":1,"./src/markers.geojson":2,"./src/url.js":3,"./src/gist.js":7,"./src/cookie.js":4,"./oauth.json":5,"underscore":8,"d3":9,"js-base64":10}],8:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -1835,7 +1986,7 @@ function getLocation() {
 }).call(this);
 
 })()
-},{}],7:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 (function(){/*
  * $Id: base64.js,v 2.12 2013/05/06 07:54:20 dankogai Exp dankogai $
  *
@@ -2012,13 +2163,13 @@ function getLocation() {
 })(this);
 
 })()
-},{"buffer":8}],5:[function(require,module,exports){
+},{"buffer":11}],9:[function(require,module,exports){
 (function(){require("./d3");
 module.exports = d3;
 (function () { delete this.d3; })(); // unset global
 
 })()
-},{"./d3":9}],10:[function(require,module,exports){
+},{"./d3":12}],13:[function(require,module,exports){
 (function(){// UTILITY
 var util = require('util');
 var Buffer = require("buffer").Buffer;
@@ -2335,7 +2486,7 @@ assert.doesNotThrow = function(block, /*optional*/error, /*optional*/message) {
 assert.ifError = function(err) { if (err) {throw err;}};
 
 })()
-},{"util":11,"buffer":8}],9:[function(require,module,exports){
+},{"util":14,"buffer":11}],12:[function(require,module,exports){
 d3 = function() {
   var d3 = {
     version: "3.1.10"
@@ -10921,8 +11072,10 @@ d3 = function() {
   });
   return d3;
 }();
-},{}],4:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 var d3 = require('d3');
+var cookie = require('./cookie.js');
+var oauth = require('.././oauth.json');
 
 var gist = {
     _isJson: function(ex) {
@@ -10932,11 +11085,30 @@ var gist = {
         return true;
     },
 
-    api: 'https://api.github.com/gists',
+    authenticate: function(cb) {
+        var request = d3.xhr(oauth.api + '/user', 'application/x-www-form-urlencoded');
+        request.header('Authorization', 'token ' + cookie.get('maplist-token'));
 
-    get: function(id, cb) {
+        request.get(function(err, res) {
+            if (err) return cb(err);
+            return cb(null, JSON.parse(res.response));
+        });
+    },
+
+    authorization: function(request) {
+        var user = cookie.get('maplist-username');
+        var token = cookie.get('maplist-token');
+        if (user && token) request.header('Authorization', 'token ' + token);
+        return request;
+    },
+
+    get: function(type, parts, cb) {
         var self = this;
-        var request = d3.xhr(this.api + '/' + id, 'application/json');
+        var request = d3.xhr(oauth.api + '/gists/' + parts[0], 'application/json');
+
+        if (type === 'user') {
+            request = d3.xhr(oauth.api + '/gists/' + parts[1], 'application/json');
+        }
 
         request.get(function(err, res) {
             if (err) return cb(err);
@@ -10948,29 +11120,59 @@ var gist = {
         });
     },
 
-    save: function(val, cb) {
-        var request = d3.xhr(this.api, 'application/json');
-        var geojson = JSON.stringify(val);
+    save: function(val, options, cb) {
+        var self = this;
+        var request;
+        var geojson = JSON.stringify(val, null, 4);
 
-        var requestObject = JSON.stringify({
-            'description': 'A Gist from MapList',
-            'public': true,
-            'files': {
-                'maplist.json': {
-                    'content': geojson
+        function createGist() {
+            request = d3.xhr(oauth.api + '/gists', 'application/json');
+            self.authorization(request);
+
+            // Create a new Gist, anonymous or not.
+            var requestObject = JSON.stringify({
+                'description': 'A Gist from MapList',
+                'public': true,
+                'files': {
+                    'maplist.json': {
+                        'content': geojson
+                    }
                 }
-            }
-        });
+            });
 
-        request.post(requestObject, function(err, res) {
-            cb(err, JSON.parse(res.response));
-        });
+            request.post(requestObject, function(err, res) {
+                if (err) return cb(err);
+                return cb(null, JSON.parse(res.response));
+            });
+        }
+
+        if (options.user === cookie.get('maplist-username')) {
+            request = d3.xhr(oauth.api + '/gists/' + options.gist, 'application/json');
+            this.authorization(request);
+
+            // Update a users gist
+            var requestObject = JSON.stringify({
+                'files': {
+                    'maplist.json': {
+                        'content': geojson
+                    }
+                }
+            });
+
+            request.send('PATCH', requestObject, function(err, res) {
+                if (err) return createGist();
+                return cb(null, JSON.parse(res.response));
+            });
+
+        } else {
+            createGist();
+        }
     }
 };
 
 module.exports = gist;
 
-},{"d3":5}],11:[function(require,module,exports){
+},{"./cookie.js":4,".././oauth.json":5,"d3":9}],14:[function(require,module,exports){
 var events = require('events');
 
 exports.isArray = isArray;
@@ -11323,7 +11525,7 @@ exports.format = function(f) {
   return str;
 };
 
-},{"events":12}],13:[function(require,module,exports){
+},{"events":15}],16:[function(require,module,exports){
 exports.readIEEE754 = function(buffer, offset, isBE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -11409,7 +11611,7 @@ exports.writeIEEE754 = function(buffer, value, offset, isBE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],8:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 (function(){function SlowBuffer (size) {
     this.length = size;
 };
@@ -12729,7 +12931,7 @@ SlowBuffer.prototype.writeDoubleLE = Buffer.prototype.writeDoubleLE;
 SlowBuffer.prototype.writeDoubleBE = Buffer.prototype.writeDoubleBE;
 
 })()
-},{"assert":10,"./buffer_ieee754":13,"base64-js":14}],15:[function(require,module,exports){
+},{"assert":13,"./buffer_ieee754":16,"base64-js":17}],18:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -12783,7 +12985,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],12:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 (function(process){if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
@@ -12969,7 +13171,7 @@ EventEmitter.prototype.listeners = function(type) {
 };
 
 })(require("__browserify_process"))
-},{"__browserify_process":15}],14:[function(require,module,exports){
+},{"__browserify_process":18}],17:[function(require,module,exports){
 (function (exports) {
 	'use strict';
 
@@ -13055,5 +13257,5 @@ EventEmitter.prototype.listeners = function(type) {
 	module.exports.fromByteArray = uint8ToBase64;
 }());
 
-},{}]},{},[3])
+},{}]},{},[6])
 ;

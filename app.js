@@ -5,7 +5,10 @@ var d3 = require('d3');
 var base64 = require('js-base64').Base64;
 var icons = require('./src/icons.js');
 var geojson = require('./src/markers.geojson');
+var url = require('./src/url.js');
 var gist = require('./src/gist.js');
+var cookie = require('./src/cookie.js');
+var oauth = require('./oauth.json');
 
 // Compile templates into an object
 var templates = {};
@@ -27,35 +30,92 @@ var _d; // Down Event
 var tol = 4; // Touch Tolerance
 var _downLock = false;
 var _clickTimeout = false;
+var authenticated;
+var user;
+var gistId;
 
-// If a hash exists and is an encoded string, parse it.
-if (window.location.hash &&
-    /^[0-9+\/]/.test(window.location.hash.split('#').pop())) {
-
-    var id = window.location.hash.split('#').pop();
-
+if (window.location.hash) {
     state.innerHTML = 'Loading';
     state.className = 'loading off';
 
-    gist.get(id, function(err, res) {
-        if (err) {
-            state.innerHTML = 'Error';
-            state.className = 'error';
-            console.error(err);
-        } else {
-            geojson = res;
-            state.innerHTML = 'Loaded';
-            state.className = 'loaded off';
+    // Returns the type of path we are working with.
+    url(window.location.hash.slice(1), function(type, parts) {
+        if (type === 'user') user = parts[0];
+        gistId = (type === 'user') ? parts[1] : parts[0];
 
-            init();
-            renderKnown();
-        }
+        gist.get(type, parts, function(err, res) {
+            if (err) {
+                state.innerHTML = 'Failed to load gist';
+                state.className = 'error';
+                console.error(err);
+                init();
+            } else {
+                geojson = res;
+                state.innerHTML = 'Loaded';
+                state.className = 'loaded off';
+
+                init();
+                renderKnown();
+            }
+        });
     });
-
 } else if (hasSession()) { // Check if a sessionStorage exists
     stashApply();
 } else {
     init();
+}
+
+// Check if user is authenticated on GitHub
+if (authenticate()) {
+    gist.authenticate(function(err, res) {
+        if (err) return console.error(err);
+        cookie.set('maplist-username', res.login);
+
+        d3.select('#state')
+            .append('li')
+            .html(templates.logout({
+                username: cookie.get('maplist-username')
+            }));
+
+        // Manage Logout
+        d3.select('.logout').on('click', function() {
+            d3.event.stopPropagation();
+            d3.event.preventDefault();
+
+            cookie.unset('maplist-username');
+            cookie.unset('maplist-token');
+            window.location.reload();
+        });
+    });
+} else {
+    d3.select('#state')
+        .append('li')
+        .html(templates.login({
+            client: oauth.clientId
+        }));
+}
+
+function authenticate() {
+    if (cookie.get('maplist-token')) return true;
+    var match = window.location.href.match(/\?code=([a-z0-9]*)/);
+
+    // Handle Code
+    if (match) {
+        d3.json(oauth.gatekeeperUrl + '/authenticate/' + match[1], function(err, res) {
+            if (err) return console.error(err);
+
+            cookie.set('maplist-token', res.token);
+            authenticated = true;
+
+            // Adjust URL
+            var regex = new RegExp('\\?code=' + match[1]);
+            window.location.href = window.location.href.replace(regex, '');
+
+        return true;
+      });
+    } else {
+        return false;
+    }
 }
 
 // Initialization
@@ -204,8 +264,6 @@ function addMarker(pos) {
 
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
             markerAdded();
         });
     }
@@ -311,8 +369,6 @@ function markerContentChange(el, type) {
                     marker.markers()[i].showTooltip();
                 }
             });
-
-            document.location.hash = '';
         })
         .on('keyup', function() {
             var value = el.property('value');
@@ -367,8 +423,6 @@ function markerColor(el) {
         renderMarkers(function() {
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
         });
     });
 }
@@ -392,8 +446,6 @@ function removeMarker(el) {
         renderMarkers(function() {
             // Stash contents in session storage
             stash();
-
-            document.location.hash = '';
         });
     });
 }
@@ -500,21 +552,27 @@ d3.select('#save').on('click', function() {
     this.innerHTML = 'Saving';
     this.className = 'off saving';
 
-    gist.save(geojson, function(err, res) {
+    gist.save(geojson, {user: user, gist: gistId}, function(err, res) {
         if (err) {
             self.innerHTML = 'Error';
             self.className = 'error';
             console.error(err);
         } else {
+            var link = res.id;
             var url = window.location.protocol + '//' + window.location.host + window.location.pathname;
-            var link = url + '#' + res.id;
-            var shareLink = '<input id="link" type="text" value="' + link + '">';
 
+            // If this a registered user saved this list:
+            if (res.user) link = res.user.login + '/' + res.id;
+
+            var shareLink = '<input id="link" type="text" value="' +
+                url + '#' + link + '">';
+
+            window.location.hash = link;
             self.innerHTML = 'Share link';
             self.className = 'saved off';
 
             d3.select('.state')
-                .append('li')
+                .insert('li', 'li:last-child')
                 .html(shareLink)
                 .node().setAttribute('class', 'share-link');
 
