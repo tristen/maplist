@@ -37,7 +37,7 @@
   </div>
 
   <script data-template='introduction' type='text/html'>
-    <input id='title' type='text' name='title' placeholder='List Name' value='<%= title %>' />
+  <textarea id='title' class='title' type='text' name='title' placeholder='List Name' value='<%= title %>'><%= title %></textarea>
     <textarea id='description' name='description' placeholder='Description'><% if (description !== 'Description') { %><%= description %><% } %></textarea>
   </script>
 

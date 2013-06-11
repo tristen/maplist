@@ -257,23 +257,17 @@ function init() {
             description: geojson.description
         }));
 
-    d3.select('#title')
-        .call(function(el) {
-            updateIntroduction(el, 'title');
-        });
-
-    d3.select('#description')
+    d3.selectAll('.introduction textarea')
         .call(function(el) {
             el.style('height', function() {
                 return this.scrollHeight + 'px';
             });
 
-            updateIntroduction(el, 'description');
+            updateIntroduction(el);
         })
         .on('cut', resize)
         .on('paste', resize)
-        .on('drop', resize)
-        .on('keydown', resize);
+        .on('drop', resize);
 
     map.centerzoom({
         lat: geojson.location.lat,
@@ -580,8 +574,9 @@ function resize() {
 function updateIntroduction(el, type) {
     el
         .on('keyup', function() {
-            var value = el.property('value');
-            geojson[type] = value;
+            var value = this.value;
+            geojson[this.id] = value;
+            resize.call(this);
             stash();
         });
 }
