@@ -1,7 +1,7 @@
 module.exports =  { 
   "type": "FeatureCollection",
-  "title": "List name",
-  "description": "Description",
+  "title": "",
+  "description": "",
   "layer": "tristen.map-ixqro653",
   "location": {
     "lat":28,

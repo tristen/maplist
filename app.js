@@ -166,8 +166,8 @@ function addMarker(pos) {
             'properties': {
                 'id': id,
                 'marker-color': hex,
-                'title': 'Marker Name',
-                'description': 'Description',
+                'title': '',
+                'description': '',
                 'marker-zoom': map.zoom()
             }
         });
