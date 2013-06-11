@@ -8,6 +8,7 @@ var geojson = require('./src/markers.geojson');
 var url = require('./src/url.js');
 var gist = require('./src/gist.js');
 var cookie = require('./src/cookie.js');
+var intent = require('./src/intent.js');
 var oauth = require('./oauth.json');
 
 // Compile templates into an object
@@ -25,11 +26,6 @@ var hex = '#5a8cd2';
 var marker;
 var m = document.getElementById('map');
 var state = document.getElementById('save');
-
-var _d; // Down Event
-var tol = 4; // Touch Tolerance
-var _downLock = false;
-var _clickTimeout = false;
 var authenticated;
 var user;
 var gistId;
@@ -157,72 +153,6 @@ function init() {
         lon: geojson.location.lon }, geojson.location.zoom);
 }
 
-function killTimeout() {
-    if (_clickTimeout) {
-        window.clearTimeout(_clickTimeout);
-        _clickTimeout = null;
-        return true;
-    } else {
-        return false;
-    }
-}
-
-function touchCancel() {
-    d3.select(map.parent).on('touchend', null);
-    d3.select(map.parent).on('touchmove', null);
-    d3.select(map.parent).on('touchcancel', null);
-    _downLock = false;
-}
-
-// Event handler `mousedown` and `touchstart` events
-function onDown() {
-    // Ignore double-clicks by ignoring clicks within 300ms of each other.
-    if (killTimeout()) { return; }
-
-    // Prevent interaction offset calculations happening while
-    // the user is dragging the map. Store this event so that we
-    // can compare it to the up event.
-    _downLock = true;
-    _d = new MM.Point(d3.event.clientX, d3.event.clientY);
-
-    if (d3.event.type === 'mousedown') {
-        d3.select(document.body).on('click', onUp);
-        d3.select(document.body).on('mouseup', onUp);
-
-    // Only track Single touches.
-    // Double touches will not affect this control
-    } else if (d3.event.type === 'touchstart' && d3.event.touches.length === 1) {
-        // Touch moves invalidate touches
-        d3.select(map.parent).on('touchend', onUp);
-        d3.select(map.parent).on('touchmove', onUp);
-        d3.select(map.parent).on('touchcancel', touchCancel);
-    }
-}
-
-function onUp() {
-    var evt = {};
-    var pos = new MM.Point(d3.event.clientX, d3.event.clientY);
-    _downLock = false;
-
-    for (var key in d3.event) { evt[key] = d3.event[key]; }
-
-    d3.select(document.body).on('mouseup', null);
-    d3.select(map.parent).on('touchend', null);
-    d3.select(map.parent).on('touchmove', null);
-    d3.select(map.parent).on('touchcancel', null);
-
-    if (Math.round(pos.y / tol) === Math.round(_d.y / tol) &&
-        Math.round(pos.x / tol) === Math.round(_d.x / tol)) {
-        // Contain the event data in a closure.
-        _clickTimeout = window.setTimeout(
-        function() {
-            _clickTimeout = null;
-            addMarker(pos);
-        }, 300);
-    }
-    return onUp;
-}
-
 function addMarker(pos) {
     if (set) {
         var l = map.pointLocation(pos);
@@ -299,8 +229,17 @@ d3.select('.add').on('click', function() {
 
         this.className += ' on';
         set = true;
-        d3.select(map.parent).on('mousedown', onDown);
-        d3.select(map.parent).on('touchstart', onDown);
+        d3.select(map.parent)
+            .on('mousedown', function() {
+                intent(function(pos) {
+                    addMarker(pos);
+                });
+            })
+            .on('touchstart', function() {
+                intent(function(pos) {
+                    addMarker(pos);
+                });
+            });
     }
 });
 

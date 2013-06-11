@@ -19,6 +19,7 @@ APPLICATION = \
 	src/gist.js \
 	src/icons.js \
 	src/cookie.js \
+	src/intent.js \
 	src/markers.geojson \
 	app.js
 
