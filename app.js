@@ -6,17 +6,11 @@ var base64 = require('js-base64').Base64;
 var icons = require('./src/icons.js');
 var geojson = require('./src/markers.geojson');
 var url = require('./src/url.js');
+var templates = require('./src/templates.js');
 var gist = require('./src/gist.js');
 var cookie = require('./src/cookie.js');
 var intent = require('./src/intent.js');
 var oauth = require('./oauth.json');
-
-// Compile templates into an object
-var templates = {};
-d3.selectAll('script[data-template]').each(function() {
-    var el = d3.select(this);
-    templates[el.attr('data-template')] = _(el.html()).template();
-});
 
 // Some setup
 var set;
@@ -30,35 +24,96 @@ var authenticated;
 var user;
 var gistId;
 
+// Listen to changes in the hash
+window.onhashchange = route();
+
 if (window.location.hash) {
+    route();
+} else if (hasSession()) { // Check if a sessionStorage exists
+    stashApply();
+} else {
+    init();
+}
+
+function route() {
     state.innerHTML = 'Loading';
     state.className = 'loading off';
 
     // Returns the type of path we are working with.
     url(window.location.hash.slice(1), function(type, parts) {
-        if (type === 'user') user = parts[0];
-        gistId = (type === 'user') ? parts[1] : parts[0];
+        if (type === 'unknown') return init();
 
-        gist.get(type, parts, function(err, res) {
-            if (err) {
-                state.innerHTML = 'Failed to load gist';
-                state.className = 'error';
-                console.error(err);
-                init();
-            } else {
-                geojson = res;
-                state.innerHTML = 'Loaded';
-                state.className = 'loaded off';
+        var user = parts[0];
+        if (type === 'profile') {
+            gist.gists(parts, function(err, res) {
+                if (err) {
+                    state.innerHTML = 'Failed to Load Profile';
+                    state.className = 'error';
+                    console.error(err);
+                    init();
+                } else {
+                    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+                    map.centerzoom({
+                        lat: geojson.location.lat,
+                        lon: geojson.location.lon }, geojson.location.zoom);
 
-                init();
-                renderKnown();
-            }
-        });
+                    // If no maplists were returned
+                    if (!res.length) {
+                        state.innerHTML = user + ' Has no MapList\'s yet. Back?';
+                        state.className = 'back';
+                    } else { 
+                        d3.select('body')
+                            .append('div')
+                            .attr('id', 'profile')
+                            .classed('profile pad4 col12', true)
+                            .append('h1')
+                            .html('MapList\'s by ' + user);
+
+                        d3.select('#profile')
+                            .append('ul')
+                                .attr('id', 'items')
+                                .classed('items', true);
+
+                        _(res).each(function(item) {
+                            d3.select('#items')
+                                .append('li')
+                                .classed('col3', true)
+                                .html(templates.list({
+                                    title: item.description,
+                                    url: user + '/' + item.id,
+                                }))
+                                .select('a').on('click', function() {
+                                    d3.event.stopPropagation();
+                                    d3.event.preventDefault();
+
+                                    window.location.hash = this.getAttribute('rel');
+                                    window.location.reload();
+                                });
+                        });
+                    }
+                }
+            });
+        } else {
+            if (type === 'user') user = parts[0];
+            gistId = (type === 'user') ? parts[1] : parts[0];
+
+            gist.get(type, parts, function(err, res) {
+                if (err) {
+                    state.innerHTML = 'Failed to load gist';
+                    state.className = 'error';
+                    console.error(err);
+                    init();
+                } else {
+                    geojson = res;
+                    state.innerHTML = 'Loaded';
+                    state.className = 'loaded off';
+
+                    init();
+                    renderKnown();
+                }
+            });
+        }
     });
-} else if (hasSession()) { // Check if a sessionStorage exists
-    stashApply();
-} else {
-    init();
 }
 
 // Check if user is authenticated on GitHub
@@ -128,25 +183,31 @@ function init() {
             }
         });
 
-    d3.select('.maker')
-        .insert('div', '.add')
-        .classed('introduction pad2', true)
-        .html(templates.introduction({
-            title: geojson.title,
-            description: geojson.description
-        }));
+    d3.select('#console')
+        .append('div')
+        .classed('maker', true)
+        .html(templates.maker())
+            .insert('div', '.add')
+            .classed('introduction pad2', true)
+            .html(templates.introduction({
+                title: geojson.title,
+                description: geojson.description
+            }))
+            .selectAll('textarea')
+                .call(function(el) {
+                    el.style('height', function() {
+                        return this.scrollHeight + 'px';
+                    });
 
-    d3.selectAll('.introduction textarea')
-        .call(function(el) {
-            el.style('height', function() {
-                return this.scrollHeight + 'px';
-            });
+                    updateIntroduction(el);
+                })
+                .on('cut', resize)
+                .on('paste', resize)
+                .on('drop', resize);
 
-            updateIntroduction(el);
-        })
-        .on('cut', resize)
-        .on('paste', resize)
-        .on('drop', resize);
+    d3.select('#controls')
+        .append('span')
+        .html(templates.controls());
 
     map.centerzoom({
         lat: geojson.location.lat,

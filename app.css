@@ -110,18 +110,21 @@ body {
 
 h1,
 h2,
-h3,
-h4,
-h5,
 h6 {
   margin:0;
   font-weight:bold;
   }
+h3,
+h4,
+h5 {
+  margin:0;
+  font-weight:normal;
+  }
 
 h1 {
-  font-size:32px;
+  font-size:15px;
   margin-bottom:20px;
-  line-height:1em;
+  line-height:1;
   }
 
 h2 {
@@ -139,7 +142,7 @@ h3 {
 h4, h5 {
   font-size:15px;
   margin-bottom:0;
-  line-height:1.67em;
+  line-height:1;
   }
 
 p {
@@ -149,21 +152,22 @@ p {
 
 /* Links */
 a {
-  color:#77c453;
+  color:#90c5eb;
   text-decoration:none;
   -webkit-transition:color 100ms;
      -moz-transition:color 100ms;
        -o-transition:color 100ms;
           transition:color 100ms;
   }
-  a:visited {
-    color:#9ed485;
-    }
   a:hover {
-    color:#54af29;
+    color:#73b6e6;
     }
   a:active {
-    color:#9ed485;
+    color:#73b6e6;
+    }
+  .item,
+  .item:hover {
+    color:#3C4E5A;
     }
 
 abbr {
@@ -457,7 +461,7 @@ input:-moz-placeholder           { color:#506879; }
 .map .findme {
   background:#5a8cd2;
   color:#fff;
-  position:absolute;
+  position:fixed;
   bottom:20px;
   right:20px;
   z-index:1000;
@@ -528,6 +532,7 @@ input:-moz-placeholder           { color:#506879; }
                              inset 0 40px 0 0 rgba(0,0,0,0.05);
           }
 
+.controls .group li .back,
 .controls .group li .login,
 .controls .group li .logout,
 .controls .group li .save {
@@ -539,7 +544,37 @@ input:-moz-placeholder           { color:#506879; }
   color:#ccc;
   }
 
-.maker-container {
+.profile {
+  position:absolute;
+  max-height:100%;
+  overflow:auto;
+  }
+  .items .item {
+    background:#fff;
+    background:rgba(255,255,255,0.8);
+    display:block; 
+    margin:0 10px 0 0;
+    position:relative;
+    height:120px;
+    height:auto!important;
+    min-height:120px;
+    -webkit-transition:background 100ms;
+       -moz-transition:background 100ms;
+         -o-transition:background 100ms;
+            transition:background 100ms;
+    -webkit-box-shadow:0 0 4px rgba(0, 0, 0, 0.15);
+            box-shadow:0 0 8px rgba(0, 0, 0, 0.15);
+    }
+    .items .item:hover {
+      background:rgba(255,255,255,0.9);
+      }
+    .items .item > * {
+      position:absolute;
+      bottom:0;
+      left:20px;
+      }
+
+.console {
   position:absolute;
   max-height:100%;
   overflow:hidden;

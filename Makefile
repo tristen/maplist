@@ -16,6 +16,7 @@ LIBS = \
 APPLICATION = \
 	oauth.json \
 	src/url.js \
+	src/templates.js \
 	src/gist.js \
 	src/icons.js \
 	src/cookie.js \
