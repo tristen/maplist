@@ -8,27 +8,29 @@
   <link rel='stylesheet' href='./app.css'>
 </head>
 <body>
-  <div id='map' class='map'>
+
+  <div id='maplist' class='map'>
     <div id='controls' class='controls'>
       <ul id='state' class='group round state clearfix'>
         <li><a id='save' class='save' href='#'>Save</a></li>
       </ul>
+      <ul class='group layers round clearfix'>
+        <li><a href='#' data-layer='tristen.map-4s93c8qx'><span class='small icon icon-streets'></span></a></li>
+        <li><a href='#' data-layer='tristen.map-ixqro653'><span class='small icon icon-terrain'></span></a></li>
+        <li><a href='#' data-layer='tristen.map-sx6sssbx'><span class='small icon icon-satellite'></span></a></li>
+      </ul>
+      <a id='findme' class='findme round' href='#'><span class='small icon icon-findme'></span></a>
     </div>
   </div>
-  <div id='console' class='console pad2 col5'></div>
-
-  <script data-template='controls' type='text/html'>
-    <ul class='group layers round clearfix'>
-      <li><a href='#' data-layer='tristen.map-4s93c8qx'><span class='small icon icon-streets'></span></a></li>
-      <li><a href='#' data-layer='tristen.map-ixqro653'><span class='small icon icon-terrain'></span></a></li>
-      <li><a href='#' data-layer='tristen.map-sx6sssbx'><span class='small icon icon-satellite'></span></a></li>
-    </ul>
-    <a id='findme' class='findme round' href='#'><span class='small icon icon-findme'></span></a>
-  </script>
+  <div id='application' class='application pad2'></div>
 
   <script data-template='list' type='text/html'>
     <a href='#<%= url %>' rel='<%= url %>' class='item pad2'>
+      <strong><%= date %></strong>
       <h3><%= title %></h3>
+      <% if (writeable) { %>
+        <span id='gist-<%= gist %>' class='small icon icon-rubbish'></span>
+      <% } %>
     </a>
   </script>
 

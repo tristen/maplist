@@ -5,7 +5,7 @@ var tol = 4; // Touch Tolerance
 var _downLock = false;
 var _clickTimeout = false;
 
-module.exports = onDown = function(cb) {
+module.exports = onDown = function(map, cb) {
 
     // Ignore double-clicks
     if (killTimeout()) { return; }
@@ -17,19 +17,19 @@ module.exports = onDown = function(cb) {
 
     if (d3.event.type === 'mousedown') {
         d3.select(document.body)
-            .on('click', function() { onUp(cb); })
-            .on('mouseup', function() { onUp(cb); });
+            .on('click', function() { onUp(map, cb); })
+            .on('mouseup', function() { onUp(map, cb); });
 
     // Only track Single touches.
     } else if (d3.event.type === 'touchstart' && d3.event.touches.length === 1) {
         d3.select(map.parent)
-            .on('touchend', function() { onUp(cb); })
-            .on('touchmove', function() { onUp(cb); })
-            .on('touchcancel', touchCancel);
+            .on('touchend', function() { onUp(map, cb); })
+            .on('touchmove', function() { onUp(map, cb); })
+            .on('touchcancel', function() { touchCancel(map); });
     }
 }
 
-function onUp(cb) {
+function onUp(map, cb) {
     var evt = {};
     var pos = new MM.Point(d3.event.clientX, d3.event.clientY);
     _downLock = false;
@@ -64,7 +64,7 @@ function killTimeout() {
     }
 }
 
-function touchCancel() {
+function touchCancel(map) {
     d3.select(map.parent)
         .on('touchend', null)
         .on('touchmove', null)

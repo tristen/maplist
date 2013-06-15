@@ -64,18 +64,25 @@ var gist = {
         });
     },
 
+    deleteGist: function(gist, cb) {
+        request = d3.xhr(oauth.api + '/gists/' + gist, 'application/json');
+        this.authorization(request);
+
+        request.send('DELETE', function(err, res) {
+            if (err) return cb(err);
+            return cb(null, 'Deleted!');
+        });
+    },
+
     save: function(val, options, cb) {
         var self = this;
         var request;
+        var description = (val.title) ? val.title : 'A MapList';
         var geojson = JSON.stringify(val, null, 4);
 
         function createGist() {
             request = d3.xhr(oauth.api + '/gists', 'application/json');
             self.authorization(request);
-            var description = (geojson.title === '') ?
-                'A MapList' :
-                geojson.title;
-
             // Create a new Gist, anonymous or not.
             var requestObject = JSON.stringify({
                 'description': description,
@@ -99,6 +106,7 @@ var gist = {
 
             // Update a users gist
             var requestObject = JSON.stringify({
+                'description': description,
                 'files': {
                     'maplist.geojson': {
                         'content': geojson

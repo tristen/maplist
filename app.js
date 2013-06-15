@@ -15,17 +15,21 @@ var oauth = require('./oauth.json');
 // Some setup
 var set;
 var id;
-var map;
 var hex = '#5a8cd2';
 var marker;
-var m = document.getElementById('map');
+var m = document.getElementById('maplist');
 var state = document.getElementById('save');
+var application = d3.select('#application');
 var authenticated;
 var user;
 var gistId;
 
+// Initialize the map
+var map = mapbox.map(m, mapbox.layer().id(geojson.layer));
+map.getLayerAt(0).named('base');
+
 // Listen to changes in the hash
-window.onhashchange = route();
+window.onhashchange = function() { route(); };
 
 if (window.location.hash) {
     route();
@@ -36,84 +40,121 @@ if (window.location.hash) {
 }
 
 function route() {
-    state.innerHTML = 'Loading';
-    state.className = 'loading off';
+    if (window.location.hash) {
+        // Empty the contents
+        d3.select('.share-link').remove();
+        application.html('');
 
-    // Returns the type of path we are working with.
-    url(window.location.hash.slice(1), function(type, parts) {
-        if (type === 'unknown') return init();
+        state.innerHTML = 'Loading';
+        state.className = 'loading off';
 
-        var user = parts[0];
-        if (type === 'profile') {
-            gist.gists(parts, function(err, res) {
-                if (err) {
-                    state.innerHTML = 'Failed to Load Profile';
-                    state.className = 'error';
-                    console.error(err);
-                    init();
-                } else {
-                    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
-                    map.centerzoom({
-                        lat: geojson.location.lat,
-                        lon: geojson.location.lon }, geojson.location.zoom);
+        // Returns the type of path we are working with.
+        url(window.location.hash.slice(1), function(type, parts) {
+            if (type === 'unknown') return init();
+            user = parts[0];
+            if (type === 'profile') {
+                gist.gists(parts, function(err, res) {
+                    if (err) {
+                        state.innerHTML = 'Failed to Load Profile';
+                        state.className = 'error';
+                        console.error(err);
+                        init();
+                    } else {
+                        map.centerzoom({
+                            lat: geojson.location.lat,
+                            lon: geojson.location.lon }, geojson.location.zoom);
 
-                    // If no maplists were returned
-                    if (!res.length) {
-                        state.innerHTML = user + ' Has no MapList\'s yet. Back?';
-                        state.className = 'back';
-                    } else { 
-                        d3.select('body')
-                            .append('div')
-                            .attr('id', 'profile')
-                            .classed('profile pad4 col12', true)
-                            .append('h1')
-                            .html('MapList\'s by ' + user);
+                        // If no maplists were returned
+                        if (!res.length) {
+                            state.innerHTML = user + ' Has no MapList\'s yet. Back?';
+                            state.className = 'back';
 
-                        d3.select('#profile')
-                            .append('ul')
-                                .attr('id', 'items')
-                                .classed('items', true);
+                            d3.select('back').on('click', function() {
+                                d3.event.stopPropagation();
+                                d3.event.preventDefault();
+                                window.location.hash = '';
+                            });
+                        } else {
+                            state.innerHTML = 'Loaded';
+                            state.className = 'loaded off';
 
-                        _(res).each(function(item) {
-                            d3.select('#items')
-                                .append('li')
-                                .classed('col3', true)
-                                .html(templates.list({
-                                    title: item.description,
-                                    url: user + '/' + item.id,
-                                }))
-                                .select('a').on('click', function() {
-                                    d3.event.stopPropagation();
-                                    d3.event.preventDefault();
+                            application
+                                .append('div')
+                                .attr('id', 'profile')
+                                .classed('profile col12 pad2', true)
+                                .append('h1')
+                                .html('MapList\'s by ' + user);
 
-                                    window.location.hash = this.getAttribute('rel');
-                                    window.location.reload();
-                                });
-                        });
+                            d3.select('#profile')
+                                .append('ul')
+                                    .attr('id', 'items')
+                                    .classed('items', true);
+
+                            var writeable = (cookie.get('maplist-username') === user) ? true : false;
+
+                            _(res).each(function(item) {
+                                var date = new Date(item.updated_at);
+                                var d = date.getDate();
+                                var m = date.getMonth();
+                                var y = date.getFullYear();
+
+                                d3.select('#items')
+                                    .append('li')
+                                    .classed('col3', true)
+                                    .attr('id', 'gist-' + item.id)
+                                    .html(templates.list({
+                                        title: item.description,
+                                        gist: item.id,
+                                        date: d + '-' + m + '-' + y,
+                                        writeable: writeable,
+                                        url: user + '/' + item.id
+                                    }))
+                                    .select('.icon-rubbish')
+                                        .on('click', function() {
+                                            var self = this;
+                                            d3.event.stopPropagation();
+                                            d3.event.preventDefault();
+
+                                            var id = this.id.replace('gist-', '');
+                                            if (confirm('Are you sure you want to delete this file?')) {
+                                                state.innerHTML = 'Working';
+                                                gist.deleteGist(id, function(err, res) {
+                                                    if (err) {
+                                                        state.innerHTML = 'Failed to delete gist. Try Again?';
+                                                        state.className = 'error';
+                                                    } else {
+                                                        state.innerHTML = 'Deleted!';
+                                                        d3.select('#' + self.id).remove();
+                                                    }
+                                                });
+                                            }
+                                        });
+                            });
+                        }
                     }
-                }
-            });
-        } else {
-            if (type === 'user') user = parts[0];
-            gistId = (type === 'user') ? parts[1] : parts[0];
+                });
+            } else {
+                if (type === 'user') user = parts[0];
+                gistId = (type === 'user') ? parts[1] : parts[0];
 
-            gist.get(type, parts, function(err, res) {
-                if (err) {
-                    state.innerHTML = 'Failed to load gist';
-                    state.className = 'error';
-                    console.error(err);
-                    init();
-                } else {
-                    geojson = res;
-                    state.innerHTML = 'Loaded';
-                    state.className = 'loaded off';
+                gist.get(type, parts, function(err, res) {
+                    if (err) {
+                        state.innerHTML = 'Failed to load gist';
+                        state.className = 'error';
+                        console.error(err);
+                        init();
+                    } else {
+                        geojson = res;
+                        state.innerHTML = 'Loaded';
+                        state.className = 'loaded off';
 
-                    init();
-                    renderKnown();
-                }
-            });
-        }
-    });
+                        init();
+                        renderKnown();
+                    }
+                });
+            }
+        });
+    }
 }
 
 // Check if user is authenticated on GitHub
@@ -172,18 +213,18 @@ function authenticate() {
 // Initialization
 // --------------------------------------
 function init() {
-    map = mapbox.map(m, mapbox.layer().id(geojson.layer));
 
-    d3.select('#markers')
-        .on('scroll', function() {
-            if (this.scrollTop > 0) {
-                d3.select('.add').classed('shadow', true);
-            } else {
-                d3.select('.add').classed('shadow', false);
-            }
-        });
+    map.removeLayer('base')
+    map.addLayer(mapbox.layer().id(geojson.layer));
+    map.getLayerAt(0).named('base');
+
+    application
+        .append('div')
+        .attr('id', 'console')
+        .classed('console col5', true);
 
     d3.select('#console')
+        .html('')
         .append('div')
         .classed('maker', true)
         .html(templates.maker())
@@ -205,9 +246,38 @@ function init() {
                 .on('paste', resize)
                 .on('drop', resize);
 
-    d3.select('#controls')
-        .append('span')
-        .html(templates.controls());
+    d3.select('#markers')
+        .on('scroll', function() {
+            if (this.scrollTop > 0) {
+                d3.select('.add').classed('shadow', true);
+            } else {
+                d3.select('.add').classed('shadow', false);
+            }
+        });
+
+    // Adding Markers
+    // --------------------------------------
+    d3.select('.add').on('click', function() {
+        if (!set) {
+            d3.event.stopPropagation();
+            d3.event.preventDefault();
+
+            this.className += ' on';
+            set = true;
+
+            d3.select(map.parent)
+                .on('mousedown', function() {
+                    intent(map, function(pos) {
+                        addMarker(pos);
+                    });
+                })
+                .on('touchstart', function() {
+                    intent(map, function(pos) {
+                        addMarker(pos);
+                    });
+                });
+        }
+    });
 
     map.centerzoom({
         lat: geojson.location.lat,
@@ -265,10 +335,10 @@ function renderMarkers(cb) {
         var el = mapbox.markers.simplestyle_factory(f);
 
         MM.addEvent(el, 'click', function() {
-            var id = f.properties.id;
-            document.location.href = '#' + id;
-
-            d3.select('#' + id).select('input').node().focus();
+            d3.select('#' + f.properties.id)
+                .select('input')
+                .node()
+                .focus();
         });
 
         return el;
@@ -280,29 +350,6 @@ function renderMarkers(cb) {
 
     if (cb) cb();
 }
-
-// Adding Markers
-// --------------------------------------
-d3.select('.add').on('click', function() {
-    if (!set) {
-        d3.event.stopPropagation();
-        d3.event.preventDefault();
-
-        this.className += ' on';
-        set = true;
-        d3.select(map.parent)
-            .on('mousedown', function() {
-                intent(function(pos) {
-                    addMarker(pos);
-                });
-            })
-            .on('touchstart', function() {
-                intent(function(pos) {
-                    addMarker(pos);
-                });
-            });
-    }
-});
 
 function markerAdded() {
     d3.select('.add').classed('on', null);
@@ -484,7 +531,6 @@ function hasSession() {
     if (!window.sessionStorage) return false;
     var store = window.sessionStorage;
     var session = store.getItem('session');
-
     return session ? true : false;
 }
 
